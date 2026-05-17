@@ -1,0 +1,61 @@
+\chapter{基础概念}
+\begin{definition}[监督学习]
+监督学习（supervised learning）是一类利用\textbf{有标签数据集}（labeled dataset）训练模型的机器学习方法。数据集表示为 $\{(\boldsymbol{x}_i,\, y_i)\}_{i=1}^{N}$，其中 $N$ 为样本总数，$\boldsymbol{x}_i$ 为第 $i$ 个样本的\textbf{特征向量}（feature vector），$y_i$ 为对应的\textbf{标签}（label）。\textbf{监督学习算法}（supervised learning algorithm）利用上述数据集生成一个模型，以样本的特征向量作为输入，输出用于判断该样本标记的信息。
+\end{definition}
+例如，一个癌症预测模型可以利用某患者的特征向量，输出该患者患有癌症的概率。
+就是每一个数据是知道是癌症或者不是癌症的
+\begin{definition}[非监督学习]
+有别于监督学习，非监督学习（unsupervised learning）只需要包含\textbf{无标签样本}的数据集，表示为 $\{(\boldsymbol{x}_i)\}_{i=1}^{N}$。\textbf{非监督学习算法}（unsupervised learning algorithm）所产生的\textbf{模型}（model）同样接受一个特征向量 $\boldsymbol{x}$ 为输入信息，并通过数学变换使其变成另外一个对其他任务更有用的向量或数值。
+\end{definition}
+\begin{note}
+非监督学习的三类典型任务举例如下：
+\begin{itemize}
+    \item \textbf{聚类}（clustering）：对电商平台的用户按消费行为自动分组，模型输出每个用户所属的类簇标记，无需事先告知"应分几类"。
+    \item \textbf{降维}（dimensionality reduction）：将每位用户由上千维的行为特征向量压缩为二维向量，便于可视化分析用户分布。
+    \item \textbf{异常值检测}（outlier detection）：对每笔信用卡交易输出一个实数值，该值越大表示该笔交易与"正常"交易差异越大，从而识别潜在的欺诈行为。
+\end{itemize}
+\end{note}
+\begin{definition}[半监督学习]
+半监督学习（semi-supervised learning）可利用掺杂着有标签和无标签样本的数据集进行学习，通常情况下无标签样本的数量远超过有标签样本。\textbf{半监督学习算法}（semi-supervised learning algorithm）的功能和原理与监督学习算法大同小异，区别在于算法可以利用大量无标注的样本学得更好的模型。
+\end{definition}
+\begin{definition}[强化学习]
+在强化学习（reinforcement learning）中，我们假设机器"生活"在一个环境中，并可以感知当前环境的\textbf{状态}（state），状态表示为特征向量。在每个状态下，机器可以通过执行不同动作而获取相应的奖励，同时进入另一个环境状态。强化学习的目的是学习选择行动的\textbf{策略}（policy），使得机器在长期交互过程中累计获得的奖励最大化。
+\end{definition}
+
+\begin{note}
+强化学习的典型应用场景举例如下：
+\begin{itemize}
+    \item \textbf{游戏对战}：AlphaGo 以棋盘局面作为状态，以落子位置作为动作，通过不断与自身对弈获取胜负奖励，最终学得超越人类的博弈策略。
+    \item \textbf{自动驾驶}：车辆以道路环境（车速、障碍物位置等）作为状态，以加速、制动、转向作为动作，通过安全行驶里程作为奖励信号，学习最优驾驶策略。
+    \item \textbf{推荐系统}：平台以用户历史行为作为状态，以推送内容作为动作，以用户点击或停留时长作为奖励，持续优化内容推荐策略。
+\end{itemize}
+\end{note}
+\begin{note}
+\textbf{分类}（classification）与\textbf{回归}（regression）的核心区别在于输出值的类型：
+\begin{itemize}
+    \item \textbf{分类}：输出为离散值，即样本所属的类别标签。例如，判断一封邮件是否为垃圾邮件（是/否），或识别手写数字属于0到9中的哪一类。
+    \item \textbf{回归}：输出为连续实数值。例如，根据房屋面积、地段等特征向量预测房价，或根据历史数据预测某股票次日的收盘价格。
+\end{itemize}
+\end{note}
+
+\begin{note}
+\textbf{浅度学习}（shallow learning）与\textbf{深度学习}（deep learning）的区别主要体现在模型结构的复杂程度：
+\begin{itemize}
+    \item \textbf{浅度学习}：模型结构较简单，通常只有一层或少数几层变换，例如逻辑回归、支持向量机（SVM）、决策树等。此类模型对特征工程依赖较强，需要人工设计输入特征。
+    \item \textbf{深度学习}：模型由多层非线性变换堆叠而成（即深层神经网络），能够自动从原始数据中逐层提取抽象特征，无需大量人工特征设计。典型应用包括图像识别、语音识别和自然语言处理。
+\end{itemize}
+一般而言，深度学习在数据量充足时表现更优，而浅度学习在小样本或可解释性要求较高的场景下仍具有重要价值。
+\end{note}
+\begin{dxtips}
+  选方差当惩罚函数一个是因为绝对值函数不平滑，一个是可以惩罚偏差  
+\end{dxtips}
+\begin{definition}[逻辑回归——解决把结果映射到01之间以及把向量乘成数字]
+逻辑回归（logistic regression）是一种用于\textbf{二分类}任务的监督学习算法。给定样本的特征向量 $\boldsymbol{x} \in \mathbb{R}^n$，逻辑回归通过\textbf{sigmoid 函数}将线性组合 $\boldsymbol{w}^\top \boldsymbol{x} + b$ 映射到区间 $(0,1)$，输出样本属于正类的概率：
+\[
+\hat{y} = \sigma(\boldsymbol{w}^\top \boldsymbol{x} + b) = \frac{1}{1 + e^{-(\boldsymbol{w}^\top \boldsymbol{x} + b)}}
+\]
+其中 $\boldsymbol{w} \in \mathbb{R}^n$ 为权重向量，$b \in \mathbb{R}$ 为偏置项。模型参数通常通过最大化对数似然函数（即最小化交叉熵损失）估计得到。预测时，以 $\hat{y} \geq 0.5$ 判为正类，否则判为负类。
+\end{definition}
+\begin{note}
+    他用最大似然来衡量
+\end{note}

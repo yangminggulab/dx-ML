@@ -1,0 +1,119 @@
+\begin{dxtips}{数据分析、数据科学与搜广推论文书单}
+为了把机器学习知识和未来的数据分析、数据科学、推荐系统、搜索广告等方向连接起来，可以按照以下顺序阅读一些经典论文。阅读时不必追求一次读完全文，重点是理解问题背景、模型结构、核心公式以及工业场景中的应用逻辑。
+\end{dxtips}
+
+\section{数据分析与 A/B Test}
+
+\begin{enumerate}
+    \item \textbf{Controlled Experiments on the Web: Survey and Practical Guide}
+
+    这篇论文适合理解互联网公司中线上实验的基本框架，包括实验分流、指标设计、显著性检验、实验陷阱和实践经验。对于想做数据分析、策略分析和增长分析的同学来说，A/B Test 是非常核心的能力。
+
+    \item \textbf{Trustworthy Online Controlled Experiments}
+
+    这本书/相关系列内容系统总结了微软、LinkedIn 等公司在大规模线上实验中的经验。重点关注实验可信度、样本比例不匹配、护栏指标、长期效应和实验平台建设。
+
+    \item \textbf{Overlapping Experiment Infrastructure: More, Better, Faster Experimentation}
+
+    这篇 Google 论文介绍了大规模实验平台如何支持多个实验同时运行。它适合理解大厂为什么可以高频进行产品迭代，以及如何降低不同实验之间相互干扰的风险。
+
+    \item \textbf{Uplift Modeling: From Causal Inference to Personalization}
+
+    Uplift Modeling 关注的不是“谁会点击”或者“谁会购买”，而是“对谁进行干预之后能够真正带来增量”。这和推荐、广告、营销、增长策略都有关系，也和因果推断密切相关。
+\end{enumerate}
+
+\section{推荐系统与 CTR 预估}
+
+\begin{enumerate}
+    \item \textbf{Deep Neural Networks for YouTube Recommendations}
+
+    这是一篇工业推荐系统经典论文。它把 YouTube 推荐系统拆成候选生成和排序两个阶段，非常适合理解真实推荐系统不是一个单一模型，而是一整套召回、粗排、精排和重排流程。
+
+    \item \textbf{Wide \& Deep Learning for Recommender Systems}
+
+    这篇 Google 论文提出了 Wide \& Deep 模型。Wide 部分偏记忆，适合学习历史中已经出现过的特征组合；Deep 部分偏泛化，适合学习未见过的特征组合。它是工业推荐和广告 CTR 预估中的经典结构。
+
+    \item \textbf{DeepFM: A Factorization-Machine Based Neural Network for CTR Prediction}
+
+    DeepFM 将因子分解机和深度神经网络结合起来，用于点击率预测。它适合理解推荐和广告系统中非常重要的一类问题：如何对稀疏类别特征进行建模，以及如何自动学习特征交叉。
+
+    \item \textbf{DIN: Deep Interest Network for Click-Through Rate Prediction}
+
+    DIN 是阿里提出的点击率预测模型。它的核心思想是用户兴趣不是固定不变的，而是会随着当前候选商品或广告动态变化。这个思想非常适合理解电商推荐和广告推荐中的用户兴趣建模。
+
+    \item \textbf{Behavior Sequence Transformer for E-commerce Recommendation in Alibaba}
+
+    这篇论文将 Transformer 结构用于用户行为序列建模。它适合在读完 Attention Is All You Need 之后阅读，可以帮助理解 Transformer 如何从自然语言处理迁移到推荐系统场景。
+
+    \item \textbf{DLRM: Deep Learning Recommendation Model for Personalization and Recommendation Systems}
+
+    DLRM 是 Meta/Facebook 提出的推荐模型。它重点处理大规模推荐系统中的稀疏特征、embedding 表和特征交叉问题，适合理解工业级推荐模型的基本结构。
+\end{enumerate}
+
+\section{搜索、广告与 Learning to Rank}
+
+\begin{enumerate}
+    \item \textbf{From RankNet to LambdaRank to LambdaMART}
+
+    这是 Learning to Rank 方向的经典内容。搜索排序、推荐排序和广告排序本质上都需要解决“如何把候选项排得更好”的问题，因此排序学习是搜广推方向的基础。
+
+    \item \textbf{Deep Learning to Rank in Industrial Search Engines, Recommender Systems, and Online Advertising}
+
+    这是一篇偏综述性质的论文，适合理解工业界搜索、推荐和广告系统中的深度排序模型。它覆盖 matching、pre-ranking、ranking、CTR/CVR 预估等多个模块。
+
+    \item \textbf{DeepGBM: A Deep Learning Framework Distilled by GBDT for Online Prediction Tasks}
+
+    GBDT 在广告点击率预测和搜索排序中长期非常重要。这篇论文将 GBDT 和深度学习结合起来，适合理解传统机器学习模型和深度学习模型在工业预测任务中的融合。
+
+    \item \textbf{Optimizing Sponsored Search Ranking Strategy by Deep Reinforcement Learning}
+
+    这篇论文偏广告排序策略，讨论如何利用深度强化学习优化 sponsored search ranking。它比较进阶，适合在理解 CTR、CVR、排序学习和广告拍卖机制之后再阅读。
+\end{enumerate}
+
+\section{推荐阅读顺序}
+
+\begin{enumerate}
+    \item \textbf{Deep Neural Networks for YouTube Recommendations}
+
+    先读这篇，因为它最接近短视频推荐和内容推荐场景，可以帮助建立对工业推荐系统整体流程的认识。
+
+    \item \textbf{Wide \& Deep Learning for Recommender Systems}
+
+    这篇适合理解推荐系统中“记忆”和“泛化”的区别，也能帮助理解为什么工业界常常需要同时使用线性部分和深度网络部分。
+
+    \item \textbf{DeepFM: A Factorization-Machine Based Neural Network for CTR Prediction}
+
+    读完 Wide \& Deep 后再看 DeepFM，会更容易理解特征交叉和 CTR 预估问题。
+
+    \item \textbf{Controlled Experiments on the Web: Survey and Practical Guide}
+
+    推荐系统模型最终要通过线上实验验证，因此 A/B Test 是连接模型和业务效果的关键。
+
+    \item \textbf{Uplift Modeling: From Causal Inference to Personalization}
+
+    在理解 A/B Test 之后，再看 Uplift Modeling，可以进一步理解“相关性”和“因果增量”的区别。
+
+    \item \textbf{From RankNet to LambdaRank to LambdaMART}
+
+    这篇适合建立排序学习的基本框架，为搜索排序、推荐排序和广告排序打基础。
+
+    \item \textbf{DIN: Deep Interest Network for Click-Through Rate Prediction}
+
+    这篇可以帮助理解用户兴趣建模，尤其适合电商推荐、广告推荐和信息流推荐。
+
+    \item \textbf{Behavior Sequence Transformer for E-commerce Recommendation in Alibaba}
+
+    这篇适合和 Transformer 一起看，理解序列建模在推荐系统中的作用。
+
+    \item \textbf{DLRM: Deep Learning Recommendation Model for Personalization and Recommendation Systems}
+
+    这篇适合理解大规模推荐系统中的稀疏特征、embedding 和工业模型结构。
+
+    \item \textbf{Deep Learning to Rank in Industrial Search Engines, Recommender Systems, and Online Advertising}
+
+    最后读综述，把搜索、推荐、广告几个方向串起来。
+\end{enumerate}
+
+\begin{note}
+对我来说，这份书单的重点不是单纯阅读论文，而是把论文整理成可以复用的中文精读笔记。每篇论文都可以按照“问题背景、核心方法、数学公式、模型结构、工业意义、自己的批注”六个部分整理。这样不仅能帮助理解机器学习和推荐系统，也可以逐渐形成自己的数据科学与搜广推知识体系。
+\end{note}
