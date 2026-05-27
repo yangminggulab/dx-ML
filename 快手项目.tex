@@ -1,0 +1,105 @@
+\chapter{模型}
+\section{BPR模型}
+% 公式一：模型打分
+% 公式一：模型打分
+\begin{definition}[模型打分]
+$$
+\hat{y}_{ui} = f_\theta(x_u)^\top g_\phi(x_i)
+$$
+其中 $\hat{y}_{ui}$ 为用户 $u$ 对物品 $i$ 的预测偏好分数；
+$f_\theta(\cdot)$ 为 User Tower，参数为 $\theta$，输入用户特征 $x_u$，输出用户向量；
+$g_\phi(\cdot)$ 为 Item Tower，参数为 $\phi$，输入物品特征 $x_i$，输出物品向量；
+$\top$ 表示向量内积。
+\end{definition}
+\begin{note}
+训练阶段整个 batch 以矩阵形式输入：
+$$
+X_U \in \mathbb{R}^{B \times d_u}, \quad X_V \in \mathbb{R}^{B \times d_v}
+$$
+其中 $B$ 为 batch size，每一行对应一个用户/物品的特征向量。
+
+单个样本为向量形式：
+$$
+x_u \in \mathbb{R}^{d_u}, \quad x_i \in \mathbb{R}^{d_v}
+$$
+公式中 $f_\theta(x_u)$ 严格指单个样本的向量输入。
+\end{note}
+% 公式二：贝叶斯后验概率
+\begin{note}
+    embedding是嵌入的意思，说的很好transformer架构用attention公式就是把用户信息和用户的兴趣偏好嵌入了一个矩阵
+\end{note}
+\begin{note}
+$f_\theta$ 由多层堆叠构成，上一层输出作为下一层输入：
+$$
+x_u \to h_1 \to h_2 \to h_3 \to \mathbf{u}
+$$
+每一层做一次：RELU就是保留正数部分负数部分归零
+$$
+h_l = \text{ReLU}(W_l h_{l-1} + b_l)
+$$
+最终输出即为用户 embedding $\mathbf{u} \in \mathbb{R}^d$。
+\end{note}
+\begin{definition}[贝叶斯后验概率]
+$$
+P(i >_u j \mid \Theta) = \sigma(\hat{y}_{ui} - \hat{y}_{uj})
+$$
+其中 $i >_u j$ 表示用户 $u$ 对物品 $i$ 的偏好强于物品 $j$；
+$\Theta$ 为模型全部参数；
+$\hat{y}_{ui}$ 与 $\hat{y}_{uj}$ 分别为用户 $u$ 对正样本 $i$（已点击）和负样本 $j$（未点击）的预测分数；
+$\sigma(\cdot) = \dfrac{1}{1+e^{-x}}$ 为 Sigmoid 函数，将分数差压缩至 $(0,1)$ 区间作为概率。
+\end{definition}
+
+% 公式三：BPR损失函数
+\begin{note}
+贝叶斯后验概率 $P(i >_u j \mid \Theta) = \sigma(\hat{y}_{ui} - \hat{y}_{uj})$ 并非推导所得，
+而是 BPR 作者的建模假设：直接用 Sigmoid 函数将正负样本的分数差映射为概率。就是为了把他映射到0到1之间
+\end{note}
+\begin{note}
+    $\Theta$是全部样本空间是一个集合
+\end{note}
+\begin{definition}[BPR损失函数]
+$$
+\mathcal{L}_{\text{BPR}} = -\sum_{(u,i,j) \in \mathcal{D}} \log \sigma(\hat{y}_{ui} - \hat{y}_{uj}) + \lambda \|\Theta\|^2
+$$
+其中 $\mathcal{D}$ 为训练三元组集合，每条样本为 $(u, i, j)$，
+即用户 $u$、正样本 $i$、负样本 $j$；
+$\log \sigma(\hat{y}_{ui} - \hat{y}_{uj})$ 为对数似然，分数差越大则损失越小；
+$\lambda \|\Theta\|^2$ 为 L2 正则项，$\lambda$ 控制正则化强度，防止过拟合。
+\end{definition}
+\begin{dxtips}
+    训练是为了损失函数最小
+\end{dxtips}
+\begin{example}
+假设模型只有一层，参数为：
+$$
+W = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}, \quad b = \begin{bmatrix} 1 \\ -1 \end{bmatrix}
+$$
+则 L2 正则项为：
+$$
+\|\Theta\|^2 = 1^2 + 2^2 + 3^2 + 4^2 + 1^2 + (-1)^2 = 1+4+9+16+1+1 = 32
+$$
+即将 $W$ 和 $b$ 中所有元素平方后求和，得到一个标量。
+\end{example}
+参数越多正则项越大。
+\begin{note}
+原始目标是最大化所有三元组的概率之积（连乘），但连乘结果数值极小，计算机无法存储，因此取对数将连乘变为连加：
+$$
+\prod_{(u,i,j)} P(i >_u j \mid \Theta) \xrightarrow{\log} \sum_{(u,i,j)} \log P(i >_u j \mid \Theta)
+$$
+再加负号转为最小化损失，数值稳定，结果与原始目标等价。
+\end{note}
+\begin{note}
+每个三元组 $(u,i,j)$ 对应一个事件：用户 $u$ 更喜欢 $i$ 而不是 $j$。
+训练数据中有很多这样的三元组，我们希望模型对所有这些事件同时成立的概率最大，
+因此对所有三元组的概率连乘——这正是最大似然估计的思想。
+\end{note}
+\begin{note}
+$\hat{y}_{ui} - \hat{y}_{uj}$ 越大，$\sigma$ 越接近 $1$，$\log\sigma$ 越接近 $0$，加负号后损失越小。
+即正样本分数远高于负样本时，模型损失趋近于 $0$，说明排序正确。
+\end{note}
+\begin{definition}[WBPR损失函数]
+$$
+\mathcal{L}_{\text{WBPR}} = -\sum_{(u,i,j) \in \mathcal{D}} w_j \cdot \log \sigma(\hat{y}_{ui} - \hat{y}_{uj}) + \lambda\|\Theta\|^2
+$$
+其中 $w_j$ 为负样本 $j$ 的流行度权重，越流行的 item 未被点击则权重越大，损失越大，梯度信号越强。
+\end{definition}
