@@ -1,0 +1,174 @@
+\chapter{基础知识}
+\begin{definition}[广告投放核心指标]
+
+\textbf{点击率 CTR}（Click-Through Rate）：
+$$\text{CTR} = \frac{\text{点击数}}{\text{展示数}}$$
+
+\textbf{单次点击成本 CPC}（Cost Per Click）：
+$$\text{CPC} = \frac{\text{花费}}{\text{点击数}}$$
+
+\textbf{千次展示成本 CPM}（Cost Per Mille）：
+$$\text{CPM} = \frac{\text{花费}}{\text{展示数}} \times 1000$$
+
+\textbf{投资回报率 ROI}（Return on Investment）：
+$$\text{ROI} = \frac{\text{收入} - \text{成本}}{\text{成本}}$$
+
+\textbf{广告支出回报 ROAS}（Return on Ad Spend）：
+$$\text{ROAS} = \frac{\text{广告收入}}{\text{广告花费}}$$
+
+\textbf{单次安装成本 CPI}（Cost Per Install）：
+$$\text{CPI} = \frac{\text{花费}}{\text{安装数}}$$
+
+\end{definition}
+\begin{dxtips}
+    p都是per就是前面除以后面当分母。
+\end{dxtips}
+\begin{definition}[转化漏斗类指标]
+
+\textbf{转化率 CVR}（Conversion Rate）：
+$$\text{CVR} = \frac{\text{转化数}}{\text{点击数}}$$
+
+\textbf{千次展示安装数 IPM}（Installs Per Mille）：
+$$\text{IPM} = \frac{\text{安装数}}{\text{展示数}} \times 1000$$
+
+\textbf{第N日留存率}（Day N Retention Rate）：
+$$\text{Retention}_N = \frac{\text{第}N\text{天仍活跃用户数}}{\text{首日新增用户数}}$$
+
+\end{definition}
+
+\begin{definition}[预算与出价类指标]
+
+\textbf{日预算消耗率}（Daily Budget Consumption Rate）：
+$$\text{消耗率} = \frac{\text{实际消耗}}{\text{计划预算}}$$
+
+\textbf{有效千次展示收益 eCPM}（Effective Cost Per Mille）：
+$$\text{eCPM} = \frac{\text{总收入}}{\text{展示数}} \times 1000$$
+
+\textbf{出价反推}（Bid Estimation）：
+$$\text{出价} = \text{目标CPI} \times \text{预期CVR}$$
+
+\end{definition}
+
+\begin{definition}[用户价值类指标]
+
+\textbf{用户生命周期价值 LTV}（Lifetime Value）：
+$$\text{LTV} = \text{ARPU} \times \text{平均生命周期}$$
+
+\textbf{每用户平均收入 ARPU}（Average Revenue Per User）：
+$$\text{ARPU} = \frac{\text{总收入}}{\text{活跃用户数}}$$
+
+\textbf{ROI回收判断准则}：当 $\text{LTV} > \text{CPI}$ 时，该渠道具备投放价值。
+
+\end{definition}
+
+\begin{definition}[效果对比类指标]
+
+\textbf{同比增长率}（Year-over-Year Growth Rate，YoY）：
+$$\text{YoY} = \frac{\text{本期} - \text{同期}}{\text{同期}}$$
+
+\textbf{环比增长率}（Month-over-Month Growth Rate，MoM）：
+$$\text{MoM} = \frac{\text{本期} - \text{上期}}{\text{上期}}$$
+
+\textbf{渠道占比}（Channel Share）：
+$$\text{Channel Share} = \frac{\text{某渠道花费}}{\text{总花费}}$$
+
+\end{definition}
+
+\begin{note}[广告投放漏斗归因一览]
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{漏斗层级} & \textbf{核心指标} & \textbf{出问题找谁} \\
+\hline
+曝光 $\to$ 点击 & CTR（Click-Through Rate，点击率） & 素材组/定向策略 \\
+点击 $\to$ 完播 & VTR（View-Through Rate，完播率） & 视频内容质量 \\
+\multirow{2}{*}{完播 $\to$ 安装} & CVR（Conversion Rate，转化率） & \multirow{2}{*}{落地页、游戏包体} \\
+ & IPM（Installs Per Mille，千次展示安装数） & \\
+\multirow{2}{*}{安装 $\to$ 付费} & 付费转化率（Payment Conversion Rate） & \multirow{2}{*}{人群质量、游戏内设计} \\
+ & ARPU（Average Revenue Per User，每用户平均收入） & \\
+\multirow{2}{*}{整体盈利} & ROAS（Return on Ad Spend，广告支出回报） & \multirow{2}{*}{投放策略} \\
+ & LTV/CPI（Lifetime Value，用户生命周期价值 / Cost Per Install，单次安装成本） & \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{note}
+
+\begin{dxtips}
+    OK你按照我这个方式再梳理一下，我可不可以这样理解我们投放广告会经过，挑选用户，用户经过点击，观看，下载，付费四个过程大部分指标就是看这个些的。点击率低可能封面不好看，完播率低可能是内容不精彩，完播率也高但是下载不高可能是下载麻烦，落地页不好看，下载率高但是付费少可能是人群有问题对吗
+\end{dxtips}
+\begin{note}[广告分析常用工具]
+
+\textbf{一、网站/产品流量分析}
+
+\begin{itemize}
+    \item \textbf{Google Analytics 4（GA4）}：看用户来源、访问、转化、留存，用于理解网站和 App 整体表现。
+    \item \textbf{Microsoft Clarity}：看热力图、用户录屏、页面点击行为，免费行为分析工具。
+\end{itemize}
+
+对应岗位：数据分析、增长分析、产品分析、网站运营分析。
+
+\textbf{二、广告投放分析}
+
+\begin{itemize}
+    \item \textbf{Meta Ads Manager}（即 Facebook / Instagram 广告后台）：查看 Campaign、Ad Set、Ad 层级的数据表现。
+    \item \textbf{Google Ads + GA4}：看广告带来的点击、转化、ROI。
+    \item \textbf{国内对应工具}：巨量引擎、腾讯广告、快手磁力引擎、百度营销。
+\end{itemize}
+
+对应岗位：广告投放、商业化数据分析、增长运营、效果广告优化师。
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\hline
+\textbf{分析对象} & \textbf{代表工具} \\
+\hline
+广告投放效果 & Meta Ads Manager、Google Ads \\
+用户行为分析 & GA4、Microsoft Clarity \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{note}
+\begin{definition}[付费转化率]
+
+\textbf{付费转化率 PCR}（Payment Conversion Rate）：
+$$\text{PCR} = \frac{\text{付费用户数}}{\text{安装数}}$$
+
+\end{definition}
+\begin{definition}[广告转化概率分解]
+
+广告系统的核心目标是预估用户最终付费的概率，
+按漏斗结构分解为三层条件概率的连乘：
+
+$$p(\text{付费}) = p(\text{点击}|\text{曝光}) 
+\times p(\text{安装}|\text{点击}) 
+\times p(\text{付费}|\text{安装})$$
+
+即：
+$$p(\text{付费}) = \text{CTR} \times \text{CVR} \times \text{PCR}$$
+
+\end{definition}
+
+\begin{note}[对数似然与数值稳定性]
+
+模型训练时采用\textbf{对数似然损失}（Log Loss）：
+
+$$\mathcal{L} = -\sum \left[ y \log \hat{p} 
++ (1-y)\log(1-\hat{p}) \right]$$
+
+其中 $y \in \{0,1\}$ 为真实标签，$\hat{p}$ 为模型预测概率。
+
+将概率连乘转化为对数累加：
+
+$$\log(p_1 \times p_2 \times p_3) 
+= \log p_1 + \log p_2 + \log p_3$$
+
+这样做的原因是避免\textbf{数值下溢}问题：
+多个小概率直接连乘会趋近于零，
+超出计算机浮点数的表示范围。
+
+\end{note}
