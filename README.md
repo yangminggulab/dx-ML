@@ -1,3 +1,39 @@
+## Overall Roadmap
+
+Following the Stanford CS229 framing, machine learning is a set of techniques for learning patterns from data, with major lines including supervised learning, unsupervised learning, learning theory, reinforcement learning, and applications. This repository also adds PCA/SVD/QR, tree models, recommender systems, Attention, and close readings of YouTube recommendation papers.
+
+```text
+Machine Learning = training predictive, representational, and decision systems from data
+|
++-- The central problems
+|   +-- How can existing samples predict unseen samples?
+|   |   +-- Use supervised learning, loss functions, and optimization.
+|   +-- How can structure be found without labels?
+|   |   +-- Use dimensionality reduction, clustering, and representation learning.
+|   +-- How do models enter real products?
+|       +-- Connect algorithms with recommendation, CTR, ranking, A/B tests, and error analysis.
+|
++-- Tool 1: mathematical and representation foundations
+|   +-- PCA / SVD          understand dimensionality reduction and principal directions
+|   +-- QR and least squares understand projection behind linear models
+|   +-- LLL and subspace views add deeper linear-algebra tools
+|
++-- Tool 2: classical models and learning theory
+|   +-- Basic concepts      samples, features, labels, and objectives
+|   +-- Trees and random forests handle nonlinear relations through splitting and ensembling
+|   +-- Generalization and tuning study overfitting, bias-variance, and model selection
+|
++-- Tool 3: recommendation and advertising systems
+|   +-- BPR recommendation modeling learn preference rankings from user behavior
+|   +-- CTR prediction              model click probability as an optimization target
+|   +-- Learning to Rank            unify search, ads, and recommendation as ranking problems
+|
++-- Tool 4: deep models and paper reading
+    +-- Attention / Transformer       understand modern sequence modeling
+    +-- YouTube Recommendations       learn candidate generation and ranking architectures
+    +-- Reading lists and projects    connect theory, papers, and business practice
+```
+
 <!-- Author : Dongsheng Deng & Liam Huang-->
 <!-- Program Email: elegantlatex2e@gmail.com -->
 
