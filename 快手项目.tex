@@ -2,6 +2,11 @@
 \section{BPR模型}
 % 公式一：模型打分
 % 公式一：模型打分
+\begin{dxtips}
+   
+双塔模型训练模型是为了损失函数最小，也就是所有第 $u$ 个人对第 $i$ 件事比第 $j$ 件事更喜欢的概率，因为加了负号所以他越大损失函数越小。本来应该是概率相乘但是因为太小了就取 $\ln$ 变相加了。由于概率不好算直接拿 Sigmoid 函数近似了，近似的方法就是用 $\hat{y}_{ui} - \hat{y}_{uj}$ 的差带入 Sigmoid 函数。$\hat{y}_{ui}$ 和 $\hat{y}_{uj}$ 分别是 UserTower 和 ItemTower 带入用一个 $x_u$ 再分别带入物品 $i$ 和物品 $j$ 得出的分数。
+
+\end{dxtips}
 \begin{definition}[模型打分]
 $$
 \hat{y}_{ui} = f_\theta(x_u)^\top g_\phi(x_i)
@@ -39,24 +44,7 @@ h_l = \text{ReLU}(W_l h_{l-1} + b_l)
 $$
 最终输出即为用户 embedding $\mathbf{u} \in \mathbb{R}^d$。
 \end{note}
-\begin{definition}[贝叶斯后验概率]
-$$
-P(i >_u j \mid \Theta) = \sigma(\hat{y}_{ui} - \hat{y}_{uj})
-$$
-其中 $i >_u j$ 表示用户 $u$ 对物品 $i$ 的偏好强于物品 $j$；
-$\Theta$ 为模型全部参数；
-$\hat{y}_{ui}$ 与 $\hat{y}_{uj}$ 分别为用户 $u$ 对正样本 $i$（已点击）和负样本 $j$（未点击）的预测分数；
-$\sigma(\cdot) = \dfrac{1}{1+e^{-x}}$ 为 Sigmoid 函数，将分数差压缩至 $(0,1)$ 区间作为概率。
-\end{definition}
 
-% 公式三：BPR损失函数
-\begin{note}
-贝叶斯后验概率 $P(i >_u j \mid \Theta) = \sigma(\hat{y}_{ui} - \hat{y}_{uj})$ 并非推导所得，
-而是 BPR 作者的建模假设：直接用 Sigmoid 函数将正负样本的分数差映射为概率。就是为了把他映射到0到1之间
-\end{note}
-\begin{note}
-    $\Theta$是全部样本空间是一个集合
-\end{note}
 \begin{definition}[BPR损失函数]
 $$
 \mathcal{L}_{\text{BPR}} = -\sum_{(u,i,j) \in \mathcal{D}} \log \sigma(\hat{y}_{ui} - \hat{y}_{uj}) + \lambda \|\Theta\|^2
@@ -97,9 +85,30 @@ $$
 $\hat{y}_{ui} - \hat{y}_{uj}$ 越大，$\sigma$ 越接近 $1$，$\log\sigma$ 越接近 $0$，加负号后损失越小。
 即正样本分数远高于负样本时，模型损失趋近于 $0$，说明排序正确。
 \end{note}
+
+\begin{definition}[贝叶斯后验概率近似方法]
+$$
+P(i >_u j \mid \Theta) = \sigma(\hat{y}_{ui} - \hat{y}_{uj})
+$$
+其中 $i >_u j$ 表示用户 $u$ 对物品 $i$ 的偏好强于物品 $j$；
+$\Theta$ 为模型全部参数；
+$\hat{y}_{ui}$ 与 $\hat{y}_{uj}$ 分别为用户 $u$ 对正样本 $i$（已点击）和负样本 $j$（未点击）的预测分数；
+$\sigma(\cdot) = \dfrac{1}{1+e^{-x}}$ 为 Sigmoid 函数，将分数差压缩至 $(0,1)$ 区间作为概率。
+\end{definition}
+
+% 公式三：BPR损失函数
+\begin{note}
+贝叶斯后验概率 $P(i >_u j \mid \Theta) = \sigma(\hat{y}_{ui} - \hat{y}_{uj})$ 并非推导所得，
+而是 BPR 作者的建模假设：直接用 Sigmoid 函数将正负样本的分数差映射为概率。就是为了把他映射到0到1之间
+\end{note}
+\begin{note}
+    $\Theta$是全部样本空间是一个集合
+\end{note}
+\subsection{WBPR}
 \begin{definition}[WBPR损失函数]
 $$
 \mathcal{L}_{\text{WBPR}} = -\sum_{(u,i,j) \in \mathcal{D}} w_j \cdot \log \sigma(\hat{y}_{ui} - \hat{y}_{uj}) + \lambda\|\Theta\|^2
 $$
 其中 $w_j$ 为负样本 $j$ 的流行度权重，越流行的 item 未被点击则权重越大，损失越大，梯度信号越强。
 \end{definition}
+就是在BPR的基础上给j加了权重

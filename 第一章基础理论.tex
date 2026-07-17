@@ -1,0 +1,672 @@
+\chapter{机器学习基础理论}
+\dirtree{%
+.1 1 《An Introduction to Statistical Learning with Python》.
+.2 = 给机器学习建立主干：从数据、模型、误差到泛化.
+.3 0 基础工具层（不是目的，是理解所有模型的公共语言）.
+.4 监督学习 / 无监督学习.
+.5 明确特征 X、标签 y、训练集、测试集、预测目标.
+.4 损失函数与泛化误差.
+.5 训练误差低不等于模型好，关键是新数据上表现好.
+.4 交叉验证与重采样.
+.5 用数据切分估计模型未来表现，是调参和选模型的底座.
+.3 能力一 预测连续数值 → 回归.
+.4 线性回归.
+.4 正则化.
+.4 非线性扩展.
+.3 能力二 判断样本类别 → 分类.
+.4 逻辑回归.
+.4 LDA / QDA.
+.4 SVM.
+.3 能力三 控制过拟合 → 模型选择.
+.4 偏差-方差权衡.
+.4 调参.
+.4 评估指标.
+.3 能力四 发现隐藏结构 → 无监督学习.
+.4 PCA.
+.4 K-Means.
+.4 层次聚类.
+}
+\chapter{基础工具层}
+\section{学习方式}
+\begin{definition}[监督学习]
+监督学习（supervised learning）是一类利用\textbf{有标签数据集}（labeled dataset）训练模型的机器学习方法。数据集表示为 $\{(\boldsymbol{x}_i,\, y_i)\}_{i=1}^{N}$，其中 $N$ 为样本总数，$\boldsymbol{x}_i$ 为第 $i$ 个样本的\textbf{特征向量}（feature vector），$y_i$ 为对应的\textbf{标签}（label）。\textbf{监督学习算法}（supervised learning algorithm）利用上述数据集生成一个模型，以样本的特征向量作为输入，输出用于判断该样本标记的信息。
+\end{definition}
+例如，一个癌症预测模型可以利用某患者的特征向量，输出该患者患有癌症的概率。
+就是每一个数据是知道是癌症或者不是癌症的
+\begin{definition}[非监督学习]
+有别于监督学习，非监督学习（unsupervised learning）只需要包含\textbf{无标签样本}的数据集，表示为 $\{(\boldsymbol{x}_i)\}_{i=1}^{N}$。\textbf{非监督学习算法}（unsupervised learning algorithm）所产生的\textbf{模型}（model）同样接受一个特征向量 $\boldsymbol{x}$ 为输入信息，并通过数学变换使其变成另外一个对其他任务更有用的向量或数值。
+\end{definition}
+\begin{note}
+非监督学习的三类典型任务举例如下：
+\begin{itemize}
+    \item \textbf{聚类}（clustering）：对电商平台的用户按消费行为自动分组，模型输出每个用户所属的类簇标记，无需事先告知"应分几类"。
+    \item \textbf{降维}（dimensionality reduction）：将每位用户由上千维的行为特征向量压缩为二维向量，便于可视化分析用户分布。
+    \item \textbf{异常值检测}（outlier detection）：对每笔信用卡交易输出一个实数值，该值越大表示该笔交易与"正常"交易差异越大，从而识别潜在的欺诈行为。
+\end{itemize}
+\end{note}
+\begin{definition}[半监督学习]
+半监督学习（semi-supervised learning）可利用掺杂着有标签和无标签样本的数据集进行学习，通常情况下无标签样本的数量远超过有标签样本。\textbf{半监督学习算法}（semi-supervised learning algorithm）的功能和原理与监督学习算法大同小异，区别在于算法可以利用大量无标注的样本学得更好的模型。
+\end{definition}
+\begin{definition}[强化学习]
+在强化学习（reinforcement learning）中，我们假设机器"生活"在一个环境中，并可以感知当前环境的\textbf{状态}（state），状态表示为特征向量。在每个状态下，机器可以通过执行不同动作而获取相应的奖励，同时进入另一个环境状态。强化学习的目的是学习选择行动的\textbf{策略}（policy），使得机器在长期交互过程中累计获得的奖励最大化。
+\end{definition}
+
+\begin{note}
+强化学习的典型应用场景举例如下：
+\begin{itemize}
+    \item \textbf{游戏对战}：AlphaGo 以棋盘局面作为状态，以落子位置作为动作，通过不断与自身对弈获取胜负奖励，最终学得超越人类的博弈策略。
+    \item \textbf{自动驾驶}：车辆以道路环境（车速、障碍物位置等）作为状态，以加速、制动、转向作为动作，通过安全行驶里程作为奖励信号，学习最优驾驶策略。
+    \item \textbf{推荐系统}：平台以用户历史行为作为状态，以推送内容作为动作，以用户点击或停留时长作为奖励，持续优化内容推荐策略。
+\end{itemize}
+\end{note}
+\begin{note}
+\textbf{分类}（classification）与\textbf{回归}（regression）的核心区别在于输出值的类型：
+\begin{itemize}
+    \item \textbf{分类}：输出为离散值，即样本所属的类别标签。例如，判断一封邮件是否为垃圾邮件（是/否），或识别手写数字属于0到9中的哪一类。
+    \item \textbf{回归}：输出为连续实数值。例如，根据房屋面积、地段等特征向量预测房价，或根据历史数据预测某股票次日的收盘价格。
+\end{itemize}
+\end{note}
+
+\begin{note}
+\textbf{浅度学习}（shallow learning）与\textbf{深度学习}（deep learning）的区别主要体现在模型结构的复杂程度：
+\begin{itemize}
+    \item \textbf{浅度学习}：模型结构较简单，通常只有一层或少数几层变换，例如逻辑回归、支持向量机（SVM）、决策树等。此类模型对特征工程依赖较强，需要人工设计输入特征。
+    \item \textbf{深度学习}：模型由多层非线性变换堆叠而成（即深层神经网络），能够自动从原始数据中逐层提取抽象特征，无需大量人工特征设计。典型应用包括图像识别、语音识别和自然语言处理。
+\end{itemize}
+一般而言，深度学习在数据量充足时表现更优，而浅度学习在小样本或可解释性要求较高的场景下仍具有重要价值。
+\end{note}
+\begin{dxtips}
+  选方差当惩罚函数一个是因为绝对值函数不平滑，一个是可以惩罚偏差  
+\end{dxtips}
+\chapter{线形回归-预测线性值}
+
+\chapter{逻辑回归-分类}
+\begin{definition}[逻辑回归——解决把结果映射到01之间以及把向量乘成数字]
+逻辑回归（logistic regression）是一种用于\textbf{二分类}任务的监督学习算法。给定样本的特征向量 $\boldsymbol{x} \in \mathbb{R}^n$，逻辑回归通过\textbf{sigmoid 函数}将线性组合 $\boldsymbol{w}^\top \boldsymbol{x} + b$ 映射到区间 $(0,1)$，输出样本属于正类的概率：
+\[
+\hat{y} = \sigma(\boldsymbol{w}^\top \boldsymbol{x} + b) = \frac{1}{1 + e^{-(\boldsymbol{w}^\top \boldsymbol{x} + b)}}
+\]
+其中 $\boldsymbol{w} \in \mathbb{R}^n$ 为权重向量，$b \in \mathbb{R}$ 为偏置项。模型参数通常通过最大化对数似然函数（即最小化交叉熵损失）估计得到。预测时，以 $\hat{y} \geq 0.5$ 判为正类，否则判为负类。
+\end{definition}
+\chapter{控制过拟合}
+\chapter{发现隐藏结构}
+\chapter{PCA}
+\begin{definition}[Principal Component Analysis]
+主成分分析（PCA）是一种无监督学习算法，用于降维并识别数据中最具信息量的特征。
+
+它的本质思想是：假设数据关系具有线性结构，并将其投影到一个由正交向量组成的子空间中，使得方差最大化。这样的向量称为主成分，它们决定了数据变化最大（信息量最高）的方向。
+
+另一种等价的理解是：PCA 可以看作一种线性投影，它最小化了原始点与其投影点之间的均方根（RMS）距离。
+
+\end{definition}
+
+PCA 的工作原理
+
+首先，特征矩阵需要进行中心化处理，以确保第一主成分对应的是数据的最大变化方向，而不仅仅是平均值。通常，求主成分的方法有两种主要思路：
+第一，协方差矩阵的特征值与特征向量分解。协方差矩阵反映了不同变量之间的线性相关程度。该矩阵的特征向量给出了数据方差最大的方向，而特征值则表示该方向上的方差大小。与某个特征向量对应的特征值刻画了该向量对解释数据方差的贡献。特征值越大，该主成分的重要性就越高。通常，只选择能够解释预设方差比例（如 95\%）的主成分。
+\section{协方差矩阵理解}
+\begin{definition}[3.3.1]
+设 $(X_1, X_2, \ldots, X_n)$ 是 $n$ 维随机变量，若 $E(X_1), E(X_2), \ldots, E(X_n)$ 存在，则称 
+\[
+(E(X_1), E(X_2), \ldots, E(X_n))
+\]
+为 $(X_1, X_2, \ldots, X_n)$ 的数学期望，简称期望。  
+
+\medskip
+固定 $i,j$，若 
+\[
+E\bigl([X_i - E(X_i)][X_j - E(X_j)]\bigr)
+\]
+存在，则称其为 $X_i$ 与 $X_j$ 的协方差（covariance），记作 $\mathrm{Cov}(X_i, X_j)$，即
+\[
+\mathrm{Cov}(X_i, X_j) = E\bigl([X_i - E(X_i)][X_j - E(X_j)]\bigr).
+\]
+
+\medskip
+易知，$E(X_i)$ 和 $E(X_j)$ 存在是 $\mathrm{Cov}(X_i, X_j)$ 存在的必要条件。  
+
+\medskip
+若对 $i,j = 1,2,\ldots,n$，所有 $\mathrm{Cov}(X_i, X_j)$ 均存在，则称 $n$ 阶方阵
+\[
+\Sigma = (b_{ij})_{n\times n}, \quad b_{ij} = \mathrm{Cov}(X_i, X_j)
+\]
+为 $(X_1, X_2, \ldots, X_n)$ 的协方差矩阵（covariance matrix）。
+\end{definition}
+
+
+\begin{dxtips}{方差与协方差总结}[PS]\label{dx:any-construct}
+
+
+\textbf{1. 定义}  
+\[
+\mathrm{Var}(X) = E\big[(X - E[X])^2\big], \qquad
+\mathrm{Cov}(X,Y) = E\big[(X - E[X])(Y - E[Y])\big]
+\]
+
+\medskip
+\textbf{2. 数学关系}  
+\[
+\mathrm{Var}(X) = \mathrm{Cov}(X,X)
+\]
+方差是协方差的特例。
+
+\medskip
+\textbf{3. 性质比较}  
+
+\begin{tabular}{|c|c|c|}
+\hline
+性质 & 方差 Var(X) & 协方差 Cov(X,Y) \\\hline
+定义 & 单变量的离散程度 & 两变量的联动程度 \\\hline
+符号 & $\ge 0$ & 可正、可负、或为 0 \\\hline
+几何意义 & 数据点围绕均值的分布宽度 & 点云的倾斜方向、线性关系 \\\hline
+特殊情况 & $\mathrm{Var}(X)=0 \iff X$ 为常数 & $\mathrm{Cov}(X,Y)=0 \not\Rightarrow$ 独立 \\\hline
+\end{tabular}
+
+
+\end{dxtips}
+
+里面的$ E(\cdot)$ 就是 期望算子，它的作用就是“取加权平均”。
+情景：两门考试成绩。设三名学生的语文与数学成绩分别为
+A：$X=50,\,Y=55$，B：$X=60,\,Y=65$，C：$X=70,\,Y=75$。
+
+\begin{enumerate}
+  \item 算平均值（期望）：
+  \[
+    E[X]=\frac{50+60+70}{3}=60,\qquad
+    E[Y]=\frac{55+65+75}{3}=65.
+  \]
+  \item 偏离均值：
+  \[
+  \begin{aligned}
+    &\text{A: }X-60=-10,\; Y-65=-10;\\
+    &\text{B: }X-60=0,\;   Y-65=0;\\
+    &\text{C: }X-60=10,\;  Y-65=10.
+  \end{aligned}
+  \]
+  \item 偏离乘积：
+  \[
+    \text{A: }(-10)(-10)=100,\qquad
+    \text{B: }0\cdot 0=0,\qquad
+    \text{C: }10\cdot 10=100.
+  \]
+  \item 取平均（期望）得到协方差：
+  \[
+    \mathrm{Cov}(X,Y)
+    =E\!\big[(X-E[X])(Y-E[Y])\big]
+    =\frac{100+0+100}{3}
+    =\frac{200}{3}\approx 66.7.
+  \]
+\end{enumerate}
+
+结果解读：协方差为正，说明语文高的一般数学也高（正相关）；若为负则一高一低（负相关）；若接近 $0$，则两者几乎无线性关系。
+协方差矩阵就是把所有不同的Xi和Xy的关联性在一个矩阵中记录出来。
+\begin{dxtips}
+    进一步来说来说减法是把所有的x轴上的点左移或者右移，Y轴的点上移或者下移，两个合起来的操作就是把坐标系切换成了以他们均值为原点的坐标系。他们的乘积就是每一个坐标和原点围成矩形的面积，加权的方式可以让你觉得哪一部分的重要凸显，比如说我希望进缩小极大偏离平均值的那项对整体的影响我就可以给他加一个小的权重让他生成的矩阵面积缩小。
+ \\
+	•	协方差不仅是“面积”，还是一种 趋势的代数平均。
+	•	如果绝大多数点落在“同向象限”（右上、左下），那么平均面积大于 0 → 正相关。
+	•	如果大多数点落在“反向象限”（右下、左上），平均面积小于 0 → 负相关。
+	•	如果点云分布比较均匀，正负面积互相抵消 → 协方差接近 0。
+\end{dxtips}
+协方差的几何意义有助于理解其方向与强度，可参见下列视频：\url{https://www.bilibili.com/video/BV1UWYfz2EKZ}
+
+
+
+
+
+
+
+
+
+\section{SVD奇异值分解}
+
+
+第二，数据矩阵的奇异值分解 (SVD)。奇异值分解将任意矩阵表示为三个矩阵的乘积：左奇异矩阵 $U$、奇异值对角矩阵 $S$、以及右奇异矩阵 $V$。其中，奇异值是协方差矩阵特征值的平方根（这就是为什么需要先对数据做中心化），右奇异矩阵 $V$ 对应于协方差矩阵的特征向量，而左奇异矩阵 $U$ 则是原始数据在主成分上的投影。因此，SVD 也可以提取出主成分，而且无需显式计算协方差矩阵。与特征分解方法相比，这种方式更高效、更数值稳定，尤其是在特征间存在强相关性、导致协方差矩阵条件数较差的情况下。特别地，scikit-learn 的 PCA 实现采用的就是这种方法，不过还结合了一些额外的技巧。
+\begin{dxtips}{特征值与奇异值}
+    
+
+奇异值与特征值在定义和几何意义上既有联系又有区别。对于方阵 $A \in \mathbb{R}^{n\times n}$，若存在 $\lambda$ 使得 $Av=\lambda v$（$v\neq 0$），则 $\lambda$ 称为 $A$ 的特征值；而对于任意矩阵 $A \in \mathbb{R}^{m\times n}$，若存在 $\sigma$ 使得 $A^{\mathsf T} A v=\sigma^2 v$（$v\neq 0$），则 $\sigma$ 称为 $A$ 的奇异值，即奇异值是 $A^{\mathsf T}A$ 的特征值的非负平方根。因此奇异值永远非负，而特征值可能为正或负。进一步地，如果 $A$ 是对称矩阵，则奇异值等于特征值的绝对值。例如 $A=\begin{bmatrix}-3&0\\0&2\end{bmatrix}$ 的特征值为 $-3,2$，而奇异值为 $3,2$。\\在几何意义上，特征值描述了矩阵在某些特定方向上对向量的缩放因子，而奇异值则表示矩阵将单位球拉伸为椭球时的半轴长度，刻画的是整体的伸缩尺度。换句话说，奇异值等于 $A^{\mathsf T}A$ 的特征值平方根，而在对称矩阵的情形下，奇异值就是特征值的绝对值。
+\end{dxtips}
+\subsection{为什么要把矩阵转化为向量乘积}
+
+一个 $m\times n$ 的矩阵一共有 $mn$ 个单元，但是一列加一行只有 $m+n$ 个分量。  
+为了快速处理矩阵，往往需要将其转化为分量乘积的形式。简单来说，一个图像可以视为一个大型矩阵。  
+要完美复制它，我们需要 $8mn$ 比特的信息。  
+
+高分辨率电视通常有 $m=1080$ 与 $n=1920$，每秒通常有 $24$ 帧，而且你可能喜欢看彩色画面（$3$ 个颜色通道）。  
+因此总共需要传输
+\[
+3 \times 8 \times (1080 \times 1920 \times 24) \;=\; 3\times 8 \times 48,470,400
+\]
+比特每秒。  
+这太昂贵而且不可行，传输器也跟不上表演的速度。  
+
+当压缩做得很好时，你几乎看不出与原始图像的差别。图像的边缘（即灰度的突然改变）是最难压缩的部分。  
+如果每个 $a_{ij}$ 都是无关的随机数字，那么压缩根本不可能成功。我们完全依赖这样的事实：邻近像素通常具有相似的灰度值。  
+当你跨越边缘时，会产生一个突跳。现实世界的图像中边缘无处不在，所以动画相比静止图像更容易压缩。\\
+\subsection{为什么还需要SVD分解}
+Singular Value Decomposition，
+\begin{example}[2]
+``“王牌旗'' 法国国旗 $A$，意大利国旗 $A$，德国国旗 $A^{\mathsf T}$
+
+\[
+A =
+\begin{bmatrix}
+a & a & c & c & e & e\\
+a & a & c & c & e & e\\
+a & a & c & c & e & e\\
+a & a & c & c & e & e\\
+a & a & c & c & e & e\\
+a & a & c & c & e & e
+\end{bmatrix}
+\quad\longrightarrow\quad
+\begin{bmatrix}
+1\\1\\1\\1\\1\\1
+\end{bmatrix}
+\begin{bmatrix}
+a & a & c & c & e & e
+\end{bmatrix}
+\]
+
+国旗有 3 个颜色但是秩还是 $1$。假设这 36 个单元保持秩 $1$ 的模式 $A = u_1 v_1^{\mathsf T}$，它们甚至可以全部不相同。
+但是当秩变成 $r=2$ 时，我们需要 $u_1 v_1^{\mathsf T} + u_2 v_2^{\mathsf T}$。\textcolor{red}{秩是几就需要几个不线性相关的矩阵，每个矩阵都可以写成行乘列}
+\end{example}
+
+\begin{example}[3 嵌入方形]
+\[
+A=
+\begin{bmatrix}
+1 & 0\\
+1 & 1
+\end{bmatrix}
+\quad=\quad
+\begin{bmatrix}
+1\\1
+\end{bmatrix}
+\begin{bmatrix}
+1 & 1
+\end{bmatrix}
+-
+\begin{bmatrix}
+1\\0
+\end{bmatrix}
+\begin{bmatrix}
+0 & 1
+\end{bmatrix}.
+\]
+
+$A$ 的 $1$ 与 $0$ 可以是 $1$ 的方块与 $0$ 的方块。秩仍然是 $2$，我们仍然只需要两个项 $u_1 v_1^{\mathsf T}+u_2 v_2^{\mathsf T}$。
+一个 $6\times 6$ 图像可以由 24 个数字压缩而来；一个 $N\times N$ 图像 ($N^2$ 个数字) 可以压缩成 4 个向量 $u_1,u_2,v_1,v_2$ 的 $4N$ 个数字。
+
+注意：这并不是来自 SVD 的选择！例如 $u_1=(1,1), u_2=(1,0)$ 没有正交；
+$u_1=(1,1)$ 与 $v_2=(0,1)$ 也没有正交。SVD 会保证按照顺序选择秩 $1$ 片段。
+\end{example}
+
+\begin{dxtips}[正交化的好处]
+    
+
+ 唯一性：正交基保证分解几乎唯一，不会乱选。
+\\ 简洁几何意义：任何矩阵 = 旋转 + 拉伸 + 再旋转。
+\\数值稳定：正交基避免冗余，误差不放大。
+\\ 最优近似：保留前几个奇异值就得到最小误差的低秩近似。
+\end{dxtips}
+\subsection{如何寻找正交化基底}
+ATA是半正定而且对称的他天然自带一组正交基，AAT同理我们这样就得倒了两组正交基。
+\begin{tcolorbox}[colback=blue!5!white, colframe=blue!75!black, title=来自 SVD 的选择]
+\[
+AA^{\mathsf T} u_i = \sigma_i^2 u_i,
+\qquad
+A^{\mathsf T} A v_i = \sigma_i^2 v_i,
+\qquad
+A v_i = \sigma_i u_i
+\]
+\end{tcolorbox}
+\[
+AA^{\mathsf T}Av_i=\sigma_i^2 Av_i 
+\;\Rightarrow\; 
+Av_i \text{ 是 } AA^{\mathsf T} \text{ 的特征向量，对应特征值 } \sigma_i^2.
+\]
+
+\[
+\text{因此 } Av_i=u_i, \text{ 但此时的 } u_i \text{ 还不是单位向量，需要计算 } Av_i \text{ 的长度：}
+\]
+
+\[
+\|Av_i\|^2
+= (Av_i)^{\mathsf T}(Av_i)
+= v_i^{\mathsf T}(A^{\mathsf T}A)v_i
+= v_i^{\mathsf T}(\sigma_i^2 v_i)
+= \sigma_i^2 \|v_i\|^2
+= \sigma_i^2.
+\]
+
+\[
+\Rightarrow\quad \|Av_i\|=\sigma_i, 
+\qquad 
+u_i=\tfrac{1}{\sigma_i}Av_i.
+\]
+\begin{dxtips}
+    因为特征向量乘一个系数还是特征向量所以要看清到底指的那个，比如这里要求的就是单位化的。单位化的一大好处就是满秩正交矩阵乘自己的转置等于单位矩阵可以消除项。
+\end{dxtips}
+
+由 $Av_i=\sigma_i u_i$ 可得
+\[
+A v_i v_i^{\mathsf T}=(A v_i)\,v_i^{\mathsf T}=\sigma_i u_i v_i^{\mathsf T},
+\]
+它表示 $A$ 在第 $i$ 个方向上的秩一部分：该矩阵将任意输入向量在 $v_i$ 方向上的分量提取出来，并映射到 $u_i$ 方向上，因而秩为 $1$（若 $\sigma_i=0$ 则为 $0$）。
+\\整体的式子如下
+\[
+A V V^{\mathsf T} \;=\; U \Sigma V^{\mathsf T}, 
+\qquad V V^{\mathsf T} = I, 
+\qquad \Rightarrow\; A = U \Sigma V^{\mathsf T}.
+\]其中 $\Sigma$ 是一个对角矩阵
+\[
+\Sigma = \mathrm{diag}(\sigma_1, \sigma_2, \dots, \sigma_r).
+\]\[
+A 
+= 
+\begin{bmatrix} u_1 & u_2 \end{bmatrix}
+\begin{bmatrix} \sigma_1 & 0 \\ 0 & \sigma_2 \end{bmatrix}
+\begin{bmatrix} v_1^{\mathsf T} \\ v_2^{\mathsf T} \end{bmatrix}
+\quad\text{或更简单的}\quad
+A \begin{bmatrix} v_1 & v_2 \end{bmatrix}
+= \begin{bmatrix} \sigma_1 u_1 & \sigma_2 u_2 \end{bmatrix}.
+\]
+\\
+$\sigma $矩阵在中间，是因为矩阵运算中是后一个矩阵对前一个矩阵作用产生变换， \\
+这里 $\sigma$ 是为了得到 $u$ 的系数（即缩放），所以要放在 $U$ 矩阵的前面。
+
+\subsection{奇异值分解计算方法}
+SVD 的 $u$'s 称为左奇异向量（$AA^{\mathsf T}$ 的单位特征向量），
+$v$'s 称为右奇异向量（$A^{\mathsf T}A$ 的单位特征向量），
+$\sigma$'s 是奇异值，就是 $AA^{\mathsf T}$ 与 $A^{\mathsf T}A$ 的相同特征值的平方根：
+
+
+
+在范例 3（嵌入方形）中，下列是对称矩阵 $AA^{\mathsf T}$ 与 $A^{\mathsf T}A$：
+
+\[
+AA^{\mathsf T}=
+\begin{bmatrix}1&0\\1&1\end{bmatrix}
+\begin{bmatrix}1&1\\0&1\end{bmatrix}
+=
+\begin{bmatrix}1&1\\1&2\end{bmatrix},
+\qquad
+A^{\mathsf T}A=
+\begin{bmatrix}1&1\\0&1\end{bmatrix}
+\begin{bmatrix}1&0\\1&1\end{bmatrix}
+=
+\begin{bmatrix}2&1\\1&1\end{bmatrix}.
+\]
+
+它们的行列式是 $1$，所以 $\lambda_1 \lambda_2=1$，迹（对角线的和）是 $3$：
+
+\[
+\det\begin{bmatrix}1-\lambda & 1\\1 & 2-\lambda\end{bmatrix}
+= \lambda^2-3\lambda+1=0,
+\]
+得到
+\[
+\lambda_1 = \tfrac{3+\sqrt{5}}{2}, \qquad
+\lambda_2 = \tfrac{3-\sqrt{5}}{2}.
+\]
+
+$\lambda_1,\lambda_2$ 的平方根是
+\[
+\sigma_1=\tfrac{\sqrt{5}+1}{2}, \qquad
+\sigma_2=\tfrac{\sqrt{5}-1}{2},
+\]
+且 $\sigma_1\sigma_2=1$。
+
+---
+
+最接近 $A$ 的秩 1 矩阵是 $\sigma_1 u_1 v_1^{\mathsf T}$，误差只有 $\sigma_2\approx 0.6$，是最佳可能。
+
+$AA^{\mathsf T}$ 与 $A^{\mathsf T}A$ 的正交单位特征向量是：
+\[
+u_1=\begin{bmatrix}1\\ \sigma_1\end{bmatrix}, \quad
+u_2=\begin{bmatrix}\sigma_1\\ -1\end{bmatrix}, \quad
+v_1=\begin{bmatrix}1\\1\end{bmatrix}, \quad
+v_2=\begin{bmatrix}1\\ -\sigma_1\end{bmatrix},
+\]
+全部除以 $\sqrt{1+\sigma_1^2}$。
+\\像通常有满秩，但是他们确实
+有低效率的(low effective)秩，这就表示：很多奇异值很小，可以被设定成零。我
+们传输的是低秩的近似
+压缩时我们丢弃小的$\sigma$ 不会严重损失图像的品质，
+
+\begin{dxtips}[对角化的好处]
+    
+\begin{enumerate}
+  \item 运算简化：$A^k = P D^k P^{-1}$，复杂矩阵运算化为标量运算。
+  \item 结构清晰：在特征向量基下，矩阵只表现为伸缩（按特征值缩放）。
+  \item 理论方便：如解微分方程、研究马尔可夫链，化为一维问题。
+  \item 易于分析：长期行为由最大特征值主导，可用于近似与压缩。
+\end{enumerate}
+\end{dxtips}
+奇异值分解是线性代数的一个亮点，A 的任意 mn 矩阵，方形或矩形，它的
+秩是 r。我们会对角化 A，但不是用 X
+1
+AX，X 里面的特征向量有三个大问题：他
+们通常不是正交，不一定有足够的特征向量，而且 Ax = x 要求 A 是方形。A 的
+奇异向量以完美的方式解决了全部的问题。
+\subsection{奇异值分解也可以满足不满秩的情况}
+（使用向量 $u$’s 与 $v$’s 产生 4 个基础子空间的基底：）
+
+\[
+\begin{array}{ll}
+u_1, \ldots, u_r & \text{是列空间的一组正交单位基底} \\
+u_{r+1}, \ldots, u_m & \text{是左零空间 } N(A^{\mathsf T}) \text{ 的一组正交单位基底} \\
+v_1, \ldots, v_r & \text{是行空间的一组正交单位基底} \\
+v_{r+1}, \ldots, v_n & \text{是零空间 } N(A) \text{ 的一组正交单位基底}
+\end{array}
+\]
+这些 $v$’s 与 $u$’s 负责 $A$ 的行空间与列空间，  
+我们还有 $n-r$ 个 $v$’s 与 $m-r$ 个 $u$’s，分别来自零空间 $N(A)$ 与左零空间 $N(A^{\mathsf T})$。  
+他们自动与前面 $v$’s 与 $u$’s 正交（因为整个零空间是正交）。  
+我们现在引入 $V$ 与 $U$ 的所有 $v$’s 与 $u$’s，所以矩阵变成方形，我们仍然有 $AV = U\Sigma$。
+
+\[
+(m \times n)(n \times n) \quad AV = U \Sigma \quad (m \times m)(m \times n)
+\]
+
+\[
+A \begin{bmatrix} v_1 & \cdots & v_r & \cdots & v_n \end{bmatrix}
+= \begin{bmatrix} u_1 & \cdots & u_r & \cdots & u_n \end{bmatrix}
+\begin{bmatrix}
+\sigma_1 & & \\
+& \ddots & \\
+& & \sigma_r
+\end{bmatrix}
+\tag{3}
+\]
+
+新的 $\Sigma$ 是 $m \times n$，它就是方程式 (2) 的 $r \times r$ 矩阵加上 $m-r$ 个额外零行以及 $n-r$ 个零列，  
+真正的改变在于 $U$ 与 $V$ 的形状。这些是方形矩阵且 $V^{-1}=V^{\mathsf T}$，  
+所以 $AV = U\Sigma$ 变成 $A = U \Sigma V^{\mathsf T}$，这就是奇异值分解。  
+
+我可以把 $V^{\mathsf T}$ 的行乘来自 $U\Sigma$ 的列 $u_i\sigma_i$：
+
+\[
+\text{SVD:} \quad
+A = U \Sigma V^{\mathsf T}
+= \sigma_1 u_1 v_1^{\mathsf T} + \cdots + \sigma_r u_r v_r^{\mathsf T}.
+\tag{4}
+\]
+
+然后我们吧σ以及后面按降序排列最大的排前面。
+
+\textbf{范例 1.} 什么时候 
+\[
+A = U \Sigma V^{\mathsf T} \quad (\text{奇异值分解})
+\]
+与
+\[
+A = X \Lambda X^{-1} \quad (\text{特征值分解})
+\]
+相等？
+
+\medskip
+\textbf{解：}  
+矩阵 $A$ 需要具有正交特征向量，才能使得 $X = U = V$。  
+如果 $\Lambda = \Sigma$，则 $A$ 还需要满足特征值 $\lambda \geq 0$。  
+因此 $A$ 必须是一个正半定（或正定）对称矩阵。  
+
+只有在这种情况下：
+\[
+A = X \Lambda X^{-1} \;=\; Q \Lambda Q^{\mathsf T}
+\]
+才能与
+\[
+A = U \Sigma V^{\mathsf T}
+\]
+一致。
+
+\subsection{为什么可以去掉小的$\sigma$项}
+\textbf{例：矩阵 $A$ 的奇异值稳定性}
+
+原矩阵
+\[
+A =
+\begin{bmatrix}
+0 & 1 & 0 & 0 \\
+0 & 0 & 2 & 0 \\
+0 & 0 & 0 & 3 \\
+0 & 0 & 0 & 0
+\end{bmatrix}.
+\]
+
+---
+
+\textbf{1. 未去掉最后一行时：}  
+\[
+A^{\mathsf T}A = 
+\begin{bmatrix}
+0 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 4 & 0 \\
+0 & 0 & 0 & 9
+\end{bmatrix},
+\qquad
+\Rightarrow \sigma = 3,\,2,\,1.
+\]
+
+---
+
+\textbf{2. 去掉最后一行后：}  
+得到 $3\times 3$ 矩阵
+\[
+A' =
+\begin{bmatrix}
+0 & 1 & 0 \\
+0 & 0 & 2 \\
+0 & 0 & 0
+\end{bmatrix},
+\qquad
+A'^{\mathsf T}A' =
+\begin{bmatrix}
+0 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 4
+\end{bmatrix},
+\]
+其特征值为 $1,4,9$，对应奇异值仍为
+\[
+\sigma = 3,\,2,\,1.
+\]
+
+---
+
+\textbf{3. 结论：}  
+去掉 $A$ 的零行（或零列）不会改变非零奇异值。  
+原因是：零行/零列只会在 $A^{\mathsf T}A$ 或 $AA^{\mathsf T}$ 中产生额外的 $0$ 特征值，  
+因此不会影响已有的非零奇异值。
+\begin{proposition}[SVD 的几何意义]
+设矩阵 $A \in \mathbb{R}^{m \times n}$ 的奇异值分解为 
+\[
+A = U \Sigma V^{\mathsf T},
+\]
+则有以下几何解释：
+\begin{enumerate}
+  \item $A$ 可以分解为 \textbf{旋转–拉伸–旋转} 的组合；
+  \item $A$ 将单位圆上的向量 $x$ 变换到椭圆上的 $Ax$；
+  \item $A$ 的算子范数为
+  \[
+  \|A\| = \sigma_1,
+  \]
+  其中 $\sigma_1$ 是最大的奇异值，表示最大的增长因子
+  \[
+  \max_{x \neq 0} \frac{\|Ax\|}{\|x\|};
+  \]
+  \item $A$ 的极分解为
+  \[
+  A = QS, \quad Q = UV^{\mathsf T}, \; S = V \Sigma V^{\mathsf T};
+  \]
+  \item $A$ 的伪逆为
+  \[
+  A^{+} = V \Sigma^{+} U^{\mathsf T},
+  \]
+  它能将列空间中的 $Ax$ 映射回行空间中的 $x$。
+\end{enumerate}
+\end{proposition}
+
+
+
+
+\begin{theorem}{基于 SVD 的 PCA 构造过程如下：}
+
+\begin{enumerate}
+  \item 首先进行数据中心化，如果没有指定主成分的数量，则主成分数至少在样本数和特征数之间确定；
+  \item 然后对中心化后的数据矩阵应用奇异值分解（SVD）；
+  \item 将 \texttt{svd\_flip\_vector} 方法应用于矩阵 $U$，该方法在矩阵 $U$ 的每一列中找到最大模元素，提取其符号，并用这些符号乘以矩阵 $U$，以保证输出结果的确定性；
+  \item 每个主成分的解释方差计算为相应奇异值平方除以 $n_{\text{samples}} - 1$。然后根据下式计算变换后的数据，主成分的数量取决于所需的保留数量：
+  \[
+    X_{\text{new}} = X \cdot V = U \cdot S \cdot V^T \cdot V = U \cdot S
+  \]
+\end{enumerate}
+\end{theorem}
+\begin{theorem}[PCA 的附加特性]
+\quad
+
+(1) \textbf{解释方差系数}：每个主成分的解释方差系数可以通过变量 \texttt{explained\_variance\_ratio\_} 获得，表示数据集在每个主成分轴上的方差比例。
+
+(2) \textbf{数据恢复}：使用 \texttt{inverse\_transform()} 方法进行数据恢复，其本质是对 PCA 投影进行逆变换：
+\[
+X_{\text{recovered}} = X_{d-\text{proj}} W_d^T ,
+\]
+其中 $W_d^T$ 是前 $d$ 个主成分所组成的矩阵。数据的恢复会存在与丢弃的方差量成比例的损失；原始数据与恢复数据之间的距离平方的平均值称为 \emph{重构误差}。
+
+(3) \textbf{增量 PCA}：实现为 \texttt{IncrementalPCA} 类，允许在处理大规模数据集时更加高效，可以将数据拆分成小块并逐步存储在内存中进行训练。
+
+(4) \textbf{随机 PCA}：通过设置参数 \texttt{svd\_solver='randomized'} 来实现，使用随机算法快速计算近似的 $d$ 个主成分。该方法基于随机投影的假设，即数据在投影到低维子空间时仍能较好地保持其结构和性质。但该方法的精确度可能较低。
+
+(5) \textbf{核 PCA}：实现为 \texttt{KernelPCA} 类，允许使用核函数进行复杂的非线性投影。类似于支持向量机 (SVM)，其本质是将原始空间中的非线性问题转化为高维特征空间中的线性边界。
+\end{theorem}
+
+\begin{theorem}[PCA 的替代方法]
+尽管主成分分析（PCA）是最常用的降维算法之一，但在一些情况下，
+根据数据类型的不同，也存在一些更为合适的替代方法：
+
+\paragraph{LLE (Locally Linear Embedding)}  
+局部线性嵌入是一种通过邻居点的线性组合来表示每个数据点，
+并在低维空间中恢复这些组合的算法。这样可以保持数据的非线性几何结构，
+在某些对全局性质要求不高的任务中十分有用。
+然而，该方法计算复杂度较高，并且可能对噪声敏感。
+
+\paragraph{t-SNE (t-Distributed Stochastic Neighbor Embedding)}  
+t-SNE 是一种将高维空间中点之间的相似性转化为概率的算法，
+并试图最小化高维与低维空间中概率分布的差异。t-SNE 在可视化高维数据时非常有效，
+但它可能会扭曲数据的整体结构，因为它只考虑点在原始空间中的局部邻近性，
+而忽略了线性依赖关系。
+
+\paragraph{UMAP (Uniform Manifold Approximation and Projection)}  
+统一流形近似与投影是一种适用于数据可视化的算法，
+其思想是数据位于某个可以用邻居图近似的同质流形上。
+该方法考虑了数据的整体结构，相比 t-SNE 更能适应不同类型的数据，
+并且在处理噪声与异常值时表现更好。
+
+\paragraph{Autoencoders}  
+自编码器是一类基于神经网络的模型，通过训练编码器将输入数据转换为低维表示，
+再通过解码器从该表示中恢复原始数据。自编码器不仅可以用于数据压缩与降维，
+还可用于去噪和特征提取等多种任务。
+\end{theorem}
