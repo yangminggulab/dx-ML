@@ -1,0 +1,94 @@
+\section{attention}
+\begin{note}
+每一个 token，比如 \texttt{doing} = \texttt{do} + \texttt{ing}，都有一个固定的映射向量。把一句话的所有 token（比如 10 个）竖着排列，得到矩阵
+\[
+X \in \mathbb{R}^{n \times d}
+\]
+其中 $n$ 是 token 数量，也是模型一次能处理的上限；$d$ 是每个 token 向量的维度。
+
+用训练好的三个权重矩阵 $W_Q,\, W_K,\, W_V$ 分别右乘 $X$，$X*W_Q$按照 Attention 公式
+\[
+\mathrm{Attention}(Q,K,V) = \mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V
+\]
+将 $X$ 处理成一个新矩阵，融合了整个序列的上下文信息。
+\begin{dxtips}
+  \begin{note}
+因为 $QK^\top$ 的方差是 $d_k$，所以要除以 $\sqrt{d_k}$，本质还是标准化。
+\end{note}
+\end{dxtips}
+\begin{definition}[Softmax]
+\[
+\mathrm{softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^{n} e^{z_j}},\quad
+\text{如 } [3,1,0] \xrightarrow{e^z} [20.1,\,2.7,\,1] \xrightarrow{\text{归一化}} [0.84,\,0.11,\,0.05]
+\]
+指数 $e^z$ 放大分数差距，实现"带竞争的归一化"，使得分最高的 token 获得大部分注意力权重。
+\end{definition}
+\begin{dxtips}
+    softmax就归一化只不过为了突出重要信息先变成e的指数次方再归一
+\end{dxtips}
+\begin{itemize}
+    \item \textbf{Query ($\mathbf{W}_Q$)}: "我在找什么"，当前 token 根据自己的需求检索其他位置。
+    \item \textbf{Key ($\mathbf{W}_K$)}: "我有什么、我在哪"，提供每个 token 的标识/地址，供 Query 匹配。
+    \item \textbf{Value ($\mathbf{W}_V$)}: "我要传递什么信息"，真正被加权聚合的内容，不参与注意力权重计算。
+\end{itemize}
+
+、
+
+
+\begin{dxtips}
+    key里面有着每一个token的坐标信息用于分开我喜欢猫和猫喜欢我
+\end{dxtips}
+\begin{dxtips}
+  QKV决定了现实世界的信息到数学世界映射的准确性，FNN决定了输入到你想要的结果也就是我们给ai提一个问题他最终给我们答案的好坏。Attention 决定了模型\textbf{知不知道该关注什么}，FFN 决定了模型\textbf{能不能基于关注到的信息推算出正确答案}。前者决定"理解方向"对不对，后者决定"计算结果"好不好。
+\end{dxtips}
+然后将这个新矩阵与未处理过的自己 $X$ 相加（残差连接），对每一行（即每个 token）单独归一化，使均值为 0、方差为 1，记结果为 $x_1$：
+\[
+x_1 = \mathrm{LayerNorm}(X + \mathrm{Attention}(X))
+\]
+
+$x_1$ 经过 FFN 处理得到 $\mathrm{FFN}(x_1)$，再将 $\mathrm{FFN}(x_1)$ 与 $x_1$ 相加，再次归一化，进入下一层：
+\[
+x_2 = \mathrm{LayerNorm}(x_1 + \mathrm{FFN}(x_1))
+\]
+\end{note}
+\begin{note}
+残差连接 $x + \mathrm{Attention}(x)$ 把原始输入加回来，保证梯度能直接流回前面的层，防止网络过深时梯度消失。
+\end{note}
+\begin{note}
+   F 然后FFN 先将维度升高把粘在一起的信息分开，ReLU relu就是用来拟合函数的，这里可以理解为保留重要信息，然后再把矩阵压缩回去。
+\end{note}
+\begin{definition}[前馈网络 FFN]
+前馈网络（Feed-Forward Network，FFN）是 Transformer 每层中紧跟 Attention 的两层线性变换，对每个 token 的向量独立进行非线性精加工。设输入向量为 $\boldsymbol{x} \in \mathbb{R}^d$，则
+\[
+\mathrm{FFN}(\boldsymbol{x}) = \mathrm{ReLU}(\boldsymbol{x} W_1 + \boldsymbol{b}_1)\, W_2 + \boldsymbol{b}_2
+\]
+其中 $W_1 \in \mathbb{R}^{d \times 4d}$，$W_2 \in \mathbb{R}^{4d \times d}$。输入输出维度均为 $d$，中间层先升至 $4d$（扩大特征间隙，便于分离），经 ReLU 激活后再压回 $d$ 维。
+\end{definition}
+\begin{itemize}
+    \item \textbf{W$_1$}: up-projection（升维矩阵 / 扩张矩阵）
+    \item \textbf{W$_2$}: down-projection（降维矩阵 / 收缩矩阵）
+\end{itemize}
+\begin{definition}[ReLU 激活函数]
+ReLU（Rectified Linear Unit）定义为
+\[
+\mathrm{ReLU}(x) = \max(0,\, x)
+\]
+即保留正数、将负数清零。其作用是在 FFN 中引入非线性，使多层线性变换无法合并为单一矩阵乘法，从而赋予网络更强的表达能力。
+\end{definition}
+\begin{dxtips}
+Transformer 提供了一个通用的序列处理框架，后续所有创新本质上都是在这个框架上做文章：更好地训练它（BERT、GPT）、处理更长序列（稀疏 Attention、FlashAttention）、提升效率（蒸馏、量化）、注入更多知识（预训练 + 微调、RLHF）、扩展到图像和音频（ViT、Whisper）。Transformer 是地基，后续所有大模型都是在这块地基上盖的不同建筑。
+\end{dxtips}
+\begin{itemize}
+    \item \textbf{因果掩码（Causal Masking）—— GPT 类（Decoder）}:
+    每个 token 只允许关注\textbf{自己及左侧}的 token，不能看到右侧。
+    注意力矩阵的上三角部分被设为 $-\infty$，经过 softmax 后权重为 0：
+    \[
+    \text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}} + M\right)V
+    \]
+    其中 $M_{ij} = 0$（$i \geq j$），$M_{ij} = -\infty$（$i < j$）。
+    保证生成时只能利用过去的上下文。
+
+    \item \textbf{双向注意力—— BERT 类（Encoder）}:
+    每个 token 可以关注\textbf{序列中所有位置}（包括左右两侧），
+    不加因果掩码，捕获全局上下文信息。
+\end{itemize}
