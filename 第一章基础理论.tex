@@ -650,7 +650,7 @@ X\mid Y=k \sim N(\mu_k,\Sigma).
 \[
 \hat{Y}=\arg\max_k P(Y=k\mid X=x).
 \]
-等价地，LDA 选择使下列判别函数最大的类别：
+等价地，LDA 选择使下列判别函数最大的类别：这个其实就是1/2码氏距离然后把相同的项笑掉大牙了然后再加一个先验概率
 \[
 \delta_k(x)
 =
@@ -661,21 +661,56 @@ x^T\Sigma^{-1}\mu_k
 \log \pi_k.
 \]
 \end{definition}
+\begin{example}[LDA 直观例子]
+用身高、体重判断三类人：篮球运动员、普通人、马拉松运动员。
 
-\begin{note}
-LDA 的思想是：先估计每一类中 \(X\) 的分布，再用贝叶斯公式反推出
-\(P(Y=k\mid X=x)\)。其中 \(\pi_k\) 是第 \(k\) 类的先验概率，
-\(\mu_k\) 是第 \(k\) 类的均值，\(\Sigma\) 是共享协方差矩阵。
+LDA 先估计每类均值 $\mu_k$ 和共享协方差 $\Sigma$：
 
-由于各类共享同一个 \(\Sigma\)，比较不同类别时二次项会抵消，
-所以分类边界是线性的。
-\end{note}
+\[
+\mu_{\text{篮球}} = \begin{pmatrix}\text{平均身高}\\ \text{平均体重}\end{pmatrix},\;
+\mu_{\text{普通}} = \begin{pmatrix}\text{平均身高}\\ \text{平均体重}\end{pmatrix},\;
+\mu_{\text{马拉松}} = \begin{pmatrix}\text{平均身高}\\ \text{平均体重}\end{pmatrix}
+\]
+
+\[
+\Sigma = \begin{pmatrix}
+\text{Var(身高)} & \text{Cov(身高,体重)}\\
+\text{Cov(体重,身高)} & \text{Var(体重)}
+\end{pmatrix}
+\]
+
+新样本 $x_0 = (190,\;88)^\top$ 来了，LDA 算三类的判别得分：
+
+\[
+\delta_k(x_0) = x_0^\top \Sigma^{-1}\mu_k - \frac12 \mu_k^\top \Sigma^{-1}\mu_k + \log\pi_k
+\]
+
+判给得分最高的类：$\hat Y = \arg\max_k \delta_k(x_0)$。
+
+直观理解：$x_0$ 离哪个类的中心最近（经 $\Sigma^{-1}$ 加权），就分给谁。
+\end{example}
+\begin{proof}
+    新样本 $x$ 属于第 $k$ 类的概率取决于它与 $\mu_k$ 的距离（经 $\Sigma^{-1}$ 加权）：
+
+\[
+-\frac{1}{2}(x - \mu_k)^\top \Sigma^{-1} (x - \mu_k)
+= -\frac{1}{2}x^\top \Sigma^{-1} x + x^\top \Sigma^{-1} \mu_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k
+\]
+
+其中 $-\frac{1}{2}x^\top \Sigma^{-1} x$ 与 $k$ 无关（$x$ 固定，$\Sigma$ 共享），分类时删去，剩下：
+
+\[
+\delta_k(x) = x^\top \Sigma^{-1} \mu_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k + \log \pi_k
+\]
+
+这正是 LDA 的线性判别函数。
+\end{proof}
 \begin{dxtips}
     线性来自共享协方差矩阵。“共享协方差矩阵”意思是：
 不同类别的特征分布，可以有不同的均值，但假设它们有相同的形状和方向。他的最后得分是样本和k类匹配度+对第k类位置的修正+原本样本中第k类出现的概率。
-x特征向量转置乘协方差矩阵的逆
+x特征向量转置乘协方差矩阵的逆是消除相关性和方差
 \end{dxtips}
-
+\subsection{马氏距离}
 \begin{definition}{马氏距离}
 设 \(x\in\mathbb{R}^p\) 是一个样本点，\(\mu\in\mathbb{R}^p\) 是中心点，
 \(\Sigma\) 是协方差矩阵。则 \(x\) 到 \(\mu\) 的马氏距离定义为
@@ -693,15 +728,7 @@ d_M^2(x,\mu)
 \end{definition}
 
 \begin{note}
-马氏距离是在普通距离中加入协方差结构后的距离。普通欧氏距离默认各特征
-尺度相同、彼此独立；马氏距离通过 \(\Sigma^{-1}\) 同时修正特征尺度和相关性。
-
-直观上：
-\begin{itemize}
-    \item 方差大的方向，差异较常见，距离被压低；
-    \item 方差小的方向，差异更异常，距离被放大；
-    \item 高度相关的特征会被去冗余，避免重复计算同一类信息。
-\end{itemize}
+距离不能只看绝对差多大，还要看这个方向上本来波动大不大、变量之间有没有相关性。
 
 因此，在 LDA 中，\(\Sigma^{-1}\) 的作用是用数据自身的波动规律来衡量
 样本 \(x\) 距离类别中心 \(\mu_k\) 有多远。
@@ -765,6 +792,129 @@ d_M^2 = \frac{1}{1-\rho^2}\left[
 \]
 其中 $\rho = \frac{\sigma_{12}}{\sigma_1\sigma_2}$。$\Sigma^{-1}$ 不仅按方差加权，还通过协方差结构去除冗余信息。
 \end{note}
+
+
+\subsection{ROC与AUC}
+
+\begin{dxtips}
+    对于信用卡以及癌症检测抱着宁可错杀一千也不能放走一个的想法需要把原来百分之50可能是坏人我们就判定为坏人现在我们要设置成百分20是坏人我们就判定他是坏人
+\end{dxtips}
+\begin{itemize}
+    \item \textbf{灵敏度（Sensitivity）}：$P(\hat{Y}=1 \mid Y=1) = \dfrac{TP}{TP+FN}$，衡量模型找出"违约"样本的能力。
+    \item \textbf{特异度（Specificity）}：$P(\hat{Y}=0 \mid Y=0) = \dfrac{TN}{TN+FP}$，衡量模型辨出"未违约"样本的能力。
+\end{itemize}
+\begin{definition}{ROC 曲线}
+对阈值 $t$，定义 $\text{TP}(t)=\sum_i\mathbbm{1}(s_i\ge t\land y_i=1)$，
+$\text{FP}(t)=\sum_i\mathbbm{1}(s_i\ge t\land y_i=0)$，则
+\[
+\text{TPR}(t)=\frac{\text{TP}(t)}{\text{TP}(t)+\text{FN}(t)},\quad
+\text{FPR}(t)=\frac{\text{FP}(t)}{\text{FP}(t)+\text{TN}(t)}.
+\]
+以 $\text{FPR}(t)$ 为横轴、$\text{TPR}(t)$ 为纵轴，遍历 $t$ 绘制所得曲线为 \textbf{ROC 曲线}。
+\end{definition}
+\begin{dxtips}
+ROC 曲线：纵轴是 TPR（灵敏度/逮捕率），横轴是 FPR（1 - 特异性）。也就错杀率
+
+- TPR 就是灵敏度，也就是衡量能不能给坏的都找全了。
+- 特异性是能不能给好人不错杀了。
+- (0,0) 的时候：一个坏人找不到，一个好人不错杀。
+- (1,1) 的时候：好人坏人通杀。
+\end{dxtips}
+\begin{definition}{AUC}
+\textbf{AUC} 是 ROC 曲线下的面积：$\displaystyle\text{AUC}=\int_0^1\text{TPR}\big(\text{FPR}^{-1}(x)\big)\,\mathrm{d}x$。
+等价于随机正样本得分大于随机负样本的概率：$\text{AUC}=P(s_+>s_-)$。取值范围 $[0.5,1]$。
+\end{definition}
+\begin{note}
+选哪个阈值完全不影响 AUC。
+
+AUC 衡量的只有一件事：模型的排序能力。
+\begin{itemize}
+    \item 不管你在 ROC 曲线上选 (0.1, 0.9) 还是 (0.3, 0.98)，AUC 都是同一个值。
+    \item 因为 AUC 是整条曲线下的面积，把所有阈值都算进去了。
+    \item 它只在乎"癌患者的评分是不是普遍高于正常人"。
+\end{itemize}
+
+打个比方：
+\begin{itemize}
+    \item \textbf{AUC} = 高考成绩排名——在全校里你排什么位置（排序能力）。
+    \item \textbf{阈值} = 你选择"多少分算及格"——这完全由老师（业务方）根据实际情况来定。
+\end{itemize}
+
+AUC 高只说明模型"排名排得好"，但不能告诉你"切在哪里最好"——那是业务的事。
+\end{note}
+\begin{dxtips}
+    $\displaystyle \text{AUC} = \sum_{\text{正常人可能的分数}} \text{该分数出现的概率} \times \text{患病者分数比它高的概率}$
+\end{dxtips}
+\subsection{QDA}
+\begin{definition}{QDA（Quadratic Discriminant Analysis）二次辨别分析}
+设 $x\mid y=k\sim\mathcal{N}(\mu_k,\Sigma_k)$，$k=0,1$。贝叶斯决策规则为
+
+\[
+\hat{y}(x)=\arg\max_k \delta_k(x),
+\]
+
+其中判别函数
+
+\[
+\delta_k(x)=-\frac{1}{2}\log|\Sigma_k|-\frac{1}{2}(x-\mu_k)^\top\Sigma_k^{-1}(x-\mu_k)+\log\pi_k.
+\]
+
+$\delta_k(x)$ 包含 $x$ 的二次项（因 $\Sigma_0\neq\Sigma_1$），故决策边界为二次曲面。若 $\Sigma_0=\Sigma_1$ 则退化为 LDA。
+\end{definition}
+\begin{dxtips}
+    相求后验不好求先验乘条件概率密度，然后为了把乘变成+就取了log第一项其实就是概率密度的系数，第二项是exp里面的。第k类的条件密度就是第k类的高斯概率密度
+\end{dxtips}
+\begin{itemize}
+    \item $\displaystyle -\frac{1}{2}(x-\mu_k)^\top\Sigma_k^{-1}(x-\mu_k)$：马氏距离的平方的一半（带负号），衡量 $x$ 离第 $k$ 类中心的远近。
+    \item $\displaystyle -\frac{1}{2}\log|\Sigma_k|$：第 $k$ 类分布的"体积/扩散程度惩罚"。协方差矩阵的行列式越大，分布越分散，该惩罚项越小。
+    \item $\log\pi_k$：先验概率的对数。
+\end{itemize}
+\begin{dxtips}
+    QDA 的判别函数来自对整个高斯密度取对数。
+    因此指数项中的马氏距离平方会保留下来，
+    而密度前面的归一化系数也会变成对数项，
+    例如 $|\Sigma_k|^{-1/2}$ 会变成 $-\frac12\log|\Sigma_k|$。
+\end{dxtips}
+\begin{itemize}
+    \item \textbf{核心假设}：LDA 假设各类协方差矩阵相等 $\Sigma_0=\Sigma_1=\Sigma$；QDA 允许 $\Sigma_0\neq\Sigma_1$。
+    \item \textbf{决策边界}：LDA 为线性（超平面）；QDA 为二次（椭圆、抛物线等曲面）。
+    \item \textbf{参数数量}：LDA 需估计 $p(p+1)/2$ 个协方差参数；QDA 需估计 $p(p+1)$ 个，约为 LDA 的两倍。
+    \item \textbf{偏差-方差权衡}：LDA 偏差更高但方差更低，小样本下更稳定；QDA 偏差更低但方差更高，需足够数据支撑。
+    \item \textbf{适用场景}：LDA 适于样本量较小或各类协方差相近的情形；QDA 适于样本量充足且各类散布矩阵差异明显的情形。
+\end{itemize}
+\begin{dxtips}
+    正态分布里面exp里面的东西恰好就是马氏距离乘-1/2
+\end{dxtips}
+
+\begin{itemize}
+    \item \textbf{用 LDA 的情形}：
+    \begin{itemize}
+        \item 样本量较小，不足以稳定估计各类的协方差矩阵。
+        \item 各类的协方差矩阵大致相等（可通过 Box's M 检验验证）。
+        \item 追求模型简洁、可解释性强，或决策边界已知为线性。
+    \end{itemize}
+    \item \textbf{用 QDA 的情形}：
+    \begin{itemize}
+        \item 样本量充足，各类样本数远大于特征数 $p$。
+        \item 各类的散布程度差异明显（如一类很紧凑，另一类很分散）。
+        \item 决策边界明显非线性，且线性模型欠拟合。
+    \end{itemize}
+\end{itemize}
+\begin{definition}{朴素贝叶斯（Naive Bayes）}
+对 $x=(x_1,\dots,x_p)$，贝叶斯定理结合条件独立假设：
+
+\[
+P(y=k\mid x)\propto P(y=k)\prod_{j=1}^p P(x_j\mid y=k).
+\]
+
+\textbf{朴素假设}：给定 $y$，各特征条件独立。决策规则为
+
+\[
+\hat{y}(x)=\arg\max_k \Bigl[\log P(y=k)+\sum_{j=1}^p\log P(x_j\mid y=k)\Bigr].
+\]
+
+$P(x_j\mid y=k)$ 依特征类型选择高斯分布（连续）、多项分布（计数）或伯努利分布（二值）。
+\end{definition}
 \chapter{控制过拟合}
 \chapter{发现隐藏结构}
 \chapter{PCA}
