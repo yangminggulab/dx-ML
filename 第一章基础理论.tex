@@ -26,8 +26,79 @@
 .4 K-Means.
 .4 层次聚类.
 }
-\chapter{基础工具层}
-\section{学习方式}
+\section{基础名词与概念}
+\begin{definition}[可约误差与不可约误差]
+预测误差 = 可约误差 + 不可约误差。
+设真实关系 $Y = f(X) + \epsilon$，$\hat f(X)$ 为模型估计：
+\begin{itemize}
+  \item 可约误差：$f(X) - \hat f(X)$，可通过改进模型降低。
+  \item 不可约误差：$\epsilon$（随机噪声），无法消除。
+\end{itemize}
+\end{definition}
+\begin{note}[Bias-Variance 分解]
+预测误差分解为：
+\[
+\mathbb{E}(Y-\hat f)^2 = \underbrace{\text{Bias}^2 + \text{Variance}}_{\text{reducible}} + \underbrace{\sigma^2}_{\text{irreducible}}
+\]
+其中 $\sigma^2 = \text{Var}(\epsilon)$ 为噪声。
+\end{note}
+\begin{dxtips}
+    误差的期望就是可约误差+不可约误差也就是偏差平方+方差+不可约误差对吗
+\end{dxtips}
+\begin{example}[可约误差]
+可约误差 $f(X) - \hat f(X)$ 是模型没学到真实规律造成的误差。
+
+例如，真实关系 $f(X)=3X+5$，但你学到 $\hat f(X)=2X+10$，则 $f-\hat f$ 即为模型误差。
+
+降低可约误差的三种方式：
+\begin{itemize}
+  \item 换更好的模型：线性回归 $\to$ 神经网络
+  \item 增加训练数据：数据更多 $\Rightarrow \hat f \to f$
+  \item 调参数：正则化强度、树深度、学习率
+\end{itemize}
+
+
+\end{example}
+\begin{dxtips}
+    可约误差就是模型不够强，不可约误差就是真实世界会出现某些随机情况
+\end{dxtips}
+
+\begin{table}[htbp]
+    \centering
+    \caption{预测与推断的区别}
+    \begin{tabular}{c|c|c}
+        \hline
+        & \textbf{预测（Prediction）} & \textbf{推断（Inference）} \\
+        \hline
+        目标 
+        & 预测未来或未知结果 
+        & 理解变量之间的规律 \\
+        \hline
+        问题 
+        & $X \rightarrow Y$ 
+        & $X$ 和 $Y$ 的关系 \\
+        \hline
+        关注 
+        & 预测准确率 
+        & 参数、显著性、因果关系 \\
+        \hline
+        例子 
+        & 预测股票涨跌 
+        & 分析哪些因素影响股票价格 \\
+        \hline
+        常用方法 
+        & 机器学习、深度学习 
+        & 回归分析、假设检验 \\
+        \hline
+    \end{tabular}
+\end{table}
+\begin{dxtips}
+    线形模型是模型的名称最小二乘是构建线形模型的方法
+\end{dxtips}
+\begin{note}
+    精度越高可解释性越弱，比如线形模型。推断一般用欠柔性的方法方便解释关系，预测一遍用柔性方法但是柔性方法就是容易过拟合。
+\end{note}
+\section{监督学习}
 \begin{definition}[监督学习]
 监督学习（supervised learning）是一类利用\textbf{有标签数据集}（labeled dataset）训练模型的机器学习方法。数据集表示为 $\{(\boldsymbol{x}_i,\, y_i)\}_{i=1}^{N}$，其中 $N$ 为样本总数，$\boldsymbol{x}_i$ 为第 $i$ 个样本的\textbf{特征向量}（feature vector），$y_i$ 为对应的\textbf{标签}（label）。\textbf{监督学习算法}（supervised learning algorithm）利用上述数据集生成一个模型，以样本的特征向量作为输入，输出用于判断该样本标记的信息。
 \end{definition}
@@ -78,6 +149,160 @@
 \begin{dxtips}
   选方差当惩罚函数一个是因为绝对值函数不平滑，一个是可以惩罚偏差  
 \end{dxtips}
+
+
+
+
+
+
+
+
+
+
+
+\section{评估模型}
+\begin{dxtips}
+    定量用回归分析定性用分类问题
+\end{dxtips}
+\begin{note}{拟合效果检验}
+用测试的均方差检验模型的好坏越小越好
+  \[
+\mathrm{MSE}
+=
+\frac{1}{n}
+\sum_{i=1}^{n}
+\left(y_i-\hat{f}(x_i)\right)^2
+\]  
+\end{note}
+\begin{note}{Test MSE 的 Bias-Variance 分解}
+
+对测试点 $x_0$，期望测试 MSE 分解为三项：
+
+\[
+\mathbb{E}[(y_0 - \hat{f}(x_0))^2] = 
+\underbrace{\mathrm{Var}(\hat{f}(x_0))}_{\text{Variance}} + 
+\underbrace{[\mathrm{Bias}(\hat{f}(x_0))]^2}_{\text{Bias}^2} + 
+\underbrace{\mathrm{Var}(\epsilon)}_{\text{Irreducible Error}}
+\]
+
+\[
+\boxed{\text{Test MSE} = \text{Variance} + \text{Bias}^2 + \text{Irreducible Error}}
+\]
+
+其中 $\text{Variance} + \text{Bias}^2$ 为\textbf{可约误差}，$\mathrm{Var}(\epsilon)$ 为\textbf{不可约误差}（数据固有噪声，无法消除）。
+
+\end{note}
+\begin{dxtips}
+    偏差是用简单模型模拟复杂世界的误差，方差是用不同训练集估计f函数估计的改变量.我们想让MSE最小就是要让偏差和方差经可能的都小但是偏差方差下降的曲线是不一样的所以我们需要权衡这个。
+\end{dxtips}
+\begin{definition}{Training Error Rate}
+
+分类模型在训练集上的错误比例：
+
+\[
+\mathrm{Error\ Rate} = \frac{1}{n}\sum_{i=1}^{n} I(y_i \neq \hat{y}_i)
+\]
+
+其中 $I(\cdot)$ 为示性函数，预测错误取 $1$，否则取 $0$。
+
+\end{definition}
+\subsection{分类模型评估}\begin{definition}{贝叶斯分类器Bayes Classifier}
+
+贝叶斯分类器将每个样本分到条件概率最大的类别：
+
+\[
+\hat{f}(x_0) = \arg\max_k P(Y = k \mid X = x_0)
+\]
+
+其中 $P(Y = k \mid X = x_0)$ 为给定特征 $x_0$ 时样本属于类别 $k$ 的后验概率。
+
+贝叶斯分类器是理论上最优的分类器，其测试误差率称为\textbf{贝叶斯误差率}（Bayes Error Rate），是所有分类器能达到的最小误差下限。
+
+\end{definition}
+\begin{dxtips}
+   通过设定一个概率比如大于百分之50选A小于百分之五十选B这条等于50的分界线就是贝叶斯决策边界 分类本质是化几条线把不是一个类的隔开
+\end{dxtips}
+\begin{note}{贝叶斯分类器举例}
+
+假设用湿度、风速预测天气。新样本：湿度 90\%，风速 5 km/h。
+
+模型计算三类天气的后验概率：
+
+\[
+\begin{aligned}
+P(\text{下雨} \mid \text{湿度}=90\%, \text{风速}=5) &= 0.7 \\
+P(\text{阴天} \mid \text{湿度}=90\%, \text{风速}=5) &= 0.2 \\
+P(\text{晴天} \mid \text{湿度}=90\%, \text{风速}=5) &= 0.1
+\end{aligned}
+\]
+
+贝叶斯分类器取概率最大的类别：
+
+\[
+\hat{f}(x_0) = \arg\max_{k} P(Y = k \mid X = x_0) = \text{下雨}
+\]
+
+即给定当前特征 $X$，分别计算属于每个类别 $k$ 的概率，哪个最大就分到哪一类。
+
+\end{note}
+\begin{definition}{KNN 分类器}
+
+K 近邻分类器（K-Nearest Neighbors, KNN）是一种非参数分类方法。对于测试点 $x_0$：
+
+1. 在训练集中找到与 $x_0$ 距离最近的 $K$ 个样本（邻居）
+2. 统计这 $K$ 个邻居的类别分布
+3. 将 $x_0$ 分到邻居中出现频率最高的类别
+
+\[
+\hat{f}(x_0) = \arg\max_{k} \sum_{i \in N_K(x_0)} I(y_i = k)
+\]
+
+其中 $N_K(x_0)$ 为 $x_0$ 的 $K$ 个最近邻构成的集合，$I(\cdot)$ 为示性函数。
+
+\end{definition}
+\begin{note}{KNN 分类器举例}
+
+假设用年龄、收入预测是否购买产品，训练集如下：
+
+\[
+\begin{array}{ccc}
+\text{年龄} & \text{收入(万)} & \text{购买} \\ \hline
+25 & 30 & \text{是} \\
+35 & 50 & \text{是} \\
+22 & 20 & \text{否} \\
+28 & 45 & \text{是} \\
+23 & 25 & \text{否}
+\end{array}
+\]
+
+新样本 $x_0$: 年龄 26，收入 35 万。取 $K=3$，计算欧氏距离：
+
+\[
+\begin{aligned}
+d(26, 25) &= \sqrt{(26-25)^2 + (35-30)^2} \approx 5.1 \quad (\text{是})\\
+d(26, 35) &= \sqrt{(26-35)^2 + (35-50)^2} \approx 17.5 \quad (\text{是})\\
+d(26, 22) &= \sqrt{(26-22)^2 + (35-20)^2} \approx 15.5 \quad (\text{否})\\
+d(26, 28) &\approx 10.0 \quad (\text{是})\\
+d(26, 23) &\approx 10.0 \quad (\text{否})
+\end{aligned}
+\]
+
+最近邻：$K=3$ → 距离最近的三个样本为(25,30,是)、(23,25,否)、(28,45,是)。
+
+邻居住类分布：是 $\times 2$，否 $\times 1$。
+
+\[
+\hat{f}(x_0) = \arg\max_k \{ \text{是: }2,\ \text{否: }1 \} = \text{是}
+\]
+
+故 KNN 将 $x_0$ 预测为"购买"。
+
+\end{note}
+\begin{dxtips}
+    通过neighbors决定你是谁人以类聚物以群分，第一个K也就一共选几个最近的邻居
+\end{dxtips}
+\chapter{基础工具层}
+
 \chapter{线形回归-预测线性值}
 
 \chapter{逻辑回归-分类}
@@ -88,6 +313,458 @@
 \]
 其中 $\boldsymbol{w} \in \mathbb{R}^n$ 为权重向量，$b \in \mathbb{R}$ 为偏置项。模型参数通常通过最大化对数似然函数（即最小化交叉熵损失）估计得到。预测时，以 $\hat{y} \geq 0.5$ 判为正类，否则判为负类。
 \end{definition}
+
+
+
+\begin{note}{逻辑回归的似然函数}
+
+给定 $n$ 个样本 $(x_i, y_i)$，逻辑回归的似然函数为：
+
+\[
+L(\beta_0, \beta_1) = \prod_{i: y_i=1} p(x_i) \prod_{i': y_{i'}=0} (1-p(x_{i'}))
+\]
+
+其中 $p(x) = P(Y=1 \mid X=x) = \dfrac{e^{\beta_0+\beta_1 x}}{1+e^{\beta_0+\beta_1 x}}$。
+
+最大似然估计（MLE）找一组 $\beta_0, \beta_1$ 最大化 $L$，即让"所有样本的真实标签同时出现"的概率最大。
+
+举例：3 个样本 $(x_1,1), (x_2,0), (x_3,1)$ 的似然：
+
+\[
+L = p(x_1) \cdot (1-p(x_2)) \cdot p(x_3)
+\]
+
+直观理解：正样本的预测概率 $p(x)$ 尽量大，负样本的预测概率 $1-p(x)$ 尽量大，两者乘积最大时得到最优参数。
+
+\end{note}
+\begin{definition}{Log-Odds（对数几率）}
+
+Odds（几率）为发生与不发生概率之比：$\text{odds} = \dfrac{p}{1-p}$（$p=0.8$ 时 odds $=4$，即发生可能性是不发生的 4 倍）。
+
+Log-Odds（对数几率）即对 odds 取自然对数：$\displaystyle\log\left(\frac{p}{1-p}\right)$。
+
+\end{definition}
+
+\begin{note}{逻辑回归的核心}
+
+逻辑回归不是直接让概率 $p$ 等于线性函数，而是让 log-odds 等于线性函数：
+
+\[
+\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 x
+\]
+
+\end{note}
+\begin{dxtips}
+    也就是吸烟的人比不吸烟的人肺癌概率是15倍，要求线形模型的生活也就是要把概率映射到实数轴的时候用logit 要把数字映射到概率的时候用logistic
+\end{dxtips}
+\begin{note}{Logit vs Logistic：互为反函数}
+
+\begin{itemize}
+    \item \textbf{Logit 函数}：概率 $\to$ 实数
+    \[
+    \text{logit}(p) = \log\frac{p}{1-p}, \quad p\in(0,1) \to (-\infty, +\infty)
+    \]
+    
+    作用：将约束在 $(0,1)$ 的概率映射到全体实数，使得线性函数可以拟合。
+
+    \item \textbf{Logistic 函数}：实数 $\to$ 概率
+    \[
+    p = \frac{e^z}{1+e^z}, \quad z\in(-\infty,+\infty) \to (0,1)
+    \]
+    
+    作用：将线性组合 $z = \beta_0 + \beta_1 x$ 映射回合法的概率值。
+
+    \item \textbf{关系}：两者互为反函数，logistic 是 logit 的逆变换。
+\end{itemize}
+
+\[
+\boxed{\log\frac{p}{1-p} = \beta_0+\beta_1 x \quad\Longleftrightarrow\quad p = \frac{e^{\beta_0+\beta_1 x}}{1+e^{\beta_0+\beta_1 x}}}
+\]
+
+逻辑回归就是在线性回归外层套了一个 logistic 函数，将实数输出映射到 $[0,1]$。
+
+\end{note}
+\begin{definition}{哑变量（Dummy Variable）}
+
+将 $K$ 个类别的分类变量转化为 $K-1$ 个 0/1 数值变量：
+\[
+D_j = \begin{cases}
+1, & \text{样本属于第 } j \text{ 类} \\
+0, & \text{否则}
+\end{cases}
+,\quad j = 1,\dots,K-1
+\]
+
+第 $K$ 类作为参照组，$K-1$ 个哑变量全为 $0$。
+
+\end{definition}
+\begin{dxtips}
+所以哑变量就是把一个"是什么"的问题，拆成 $K-1$ 个"是不是？"的问题。也就是是的时候他对应的那个系数起作用也就乘1不然的话就不起作用也就乘0
+\end{dxtips}
+\begin{example}{哑变量：从设计到预测的完整流程}
+
+\textbf{场景：} 预测是否购买，特征有学历和收入。
+
+\begin{enumerate}
+    \item \textbf{设计哑变量并展示完整数据}（参照组 = 高中）
+    \[
+    \begin{array}{c|cccc|c}
+    \text{学历} & D_1(\text{本科}) & D_2(\text{研究生}) & D_3(\text{高铁司机}) & \text{收入} & \text{购买}\\ \hline
+    \text{高中} & 0 & 0 & 0 & 30 & 0\\
+    \text{本科} & 1 & 0 & 0 & 50 & 1\\
+    \text{研究生} & 0 & 1 & 0 & 40 & 1\\
+    \text{高铁司机} & 0 & 0 & 1 & 60 & 0
+    \end{array}
+    \]
+    \textbf{你知道：} $D_1,D_2,D_3$ 分别对应三种学历。
+    \textbf{模型看到：} 四个数值列（$D_1,D_2,D_3,$ 收入），仅此而已。
+
+    \item \textbf{模型训练}学出系数：
+    \[
+    \log\frac{p}{1-p} = \underbrace{-12}_{\beta_0} + \underbrace{2.5}_{\beta_1}D_1 + \underbrace{3.0}_{\beta_2}D_2 + \underbrace{(-1.5)}_{\beta_3}D_3 + \underbrace{0.2}_{\beta_4}\times\text{收入}
+    \]
+    \textbf{模型仍不知道} $D_1$ 是本科，只知道这一列等于 1 时加上 $2.5$ 误差变小。
+
+    \item \textbf{你来解释}
+    \begin{itemize}
+        \item $\beta_1=2.5$：本科购买 odds 是高中生的 $e^{2.5}\approx 12.2$ 倍
+        \item $\beta_3=-1.5$：高铁司机购买 odds 是高中生的 $e^{-1.5}\approx 0.22$ 倍（更低）
+        \item $\beta_4=0.2$：收入每增加 1 单位，odds 乘以 $e^{0.2}\approx 1.22$
+    \end{itemize}
+
+    \item \textbf{预测新样本}（本科，收入 55）
+    \[
+    D_1=1,D_2=0,D_3=0,\text{收入}=55
+    \]
+    \[
+    \log\frac{p}{1-p} = -12 + 2.5\times 1 + 0.2\times 55 = 1.5
+    \]
+    \[
+    p = \frac{e^{1.5}}{1+e^{1.5}} \approx 0.82
+    \]
+
+    \textbf{模型不知道他是本科生}，只是机械代入公式算出 82\%。\textbf{你知道他是本科生}，所以你念出那句话："本科生有 82\% 的概率购买"。
+\end{enumerate}
+
+\end{example}
+
+\begin{dxtips}
+    这个里面其实有两个模型一个是用欠款balance预测违约率一个是通过其他的指标预测balance
+\end{dxtips}
+
+\begin{example}{哑变量：ISLR 信用卡欠款预测}
+
+\textbf{场景：} 预测信用卡欠款（Balance），特征包括收入、限额、是否学生。
+
+\begin{enumerate}
+    
+
+    \item \textbf{你设计哑变量}（参照组 = 非学生）
+    \[
+    \begin{array}{cccc}
+    \text{Student}(D_1) & \text{收入} & \text{限额} & \text{欠款}\\ \hline
+    1 & 14.9 & 3601 & 333\\
+    0 & 10.6 & 2646 & 403\\
+    0 & 15.4 & 4722 & 12\\
+    1 & 16.5 & 2873 & 482
+    \end{array}
+    \]
+    只有 2 个类别（学生/非学生），所以只需 $K-1=1$ 个哑变量。$D_1=1$ 为学生。
+
+    \item \textbf{模型训练}学出系数：
+    \[
+    \widehat{\text{欠款}} = \underbrace{441}_{\beta_0} + \underbrace{(-66.5)}_{\beta_1} D_1 + \underbrace{0.013}_{\beta_2}\times\text{收入} + \underbrace{0.0015}_{\beta_3}\times\text{限额}
+    \]
+    \textbf{模型不知道} $D_1$ 是"是否学生"，只知道第 1 列等于 1 时减去 $66.5$ 误差更小。
+
+  
+  
+\end{enumerate}
+
+\end{example}
+
+\begin{dxtips}
+    $p$ 值在探究 $A$ 和 $B$ 到底有没有关系的时候很重要，假设实验也是 $H_0$：$A$ 和 $B$ 无关（也就是系数为 $0$），$H_1$ 就是有关。
+\end{dxtips}
+\begin{itemize}
+  \item 系数（Coefficient）：表示变量的影响方向和大小。balance 每增加 1 单位，log-odds 增加 0.0055。
+  \item 标准误差（Standard Error）：衡量系数估计的稳定性。标准误差越小，估计越可靠。
+  \item $z$ 统计量（$z$-statistic）：系数与其标准误差的比值，衡量系数离 0 有多远。
+  \item $p$ 值（$p$-value）：在 $\beta=0$ 的零假设下，观察到当前 $z$ 统计量的概率。$p$ 值越小，变量越显著。
+\end{itemize}
+\begin{example}{混淆现象：学生、信用卡欠款与违约率}
+
+\textbf{数据：} ISL 的 Default 数据集。响应变量为
+\[
+default \in \{No, Yes\},
+\]
+解释变量包括信用卡欠款余额 \(balance\)、收入 \(income\) 和学生身份 \(student\)。
+
+\vspace{0.3em}
+
+\textbf{模型一：只用 balance 预测违约率}
+\[
+\log\left(\frac{P(default=Yes)}{1-P(default=Yes)}\right)
+=
+\beta_0+\beta_1 balance
+\quad\Rightarrow\quad \beta_1>0.
+\]
+结论：信用卡欠款余额越高，违约概率越高。
+
+\vspace{0.3em}
+
+\textbf{模型二：只用 student 预测违约率}
+\[
+\log\left(\frac{P(default=Yes)}{1-P(default=Yes)}\right)
+=
+\beta_0+\beta_1 student
+\quad\Rightarrow\quad \beta_1>0.
+\]
+结论：只看学生身份时，学生的违约概率看起来更高。
+
+\vspace{0.3em}
+
+\textbf{模型三：同时控制 balance、income 和 student}
+\[
+\log\left(\frac{P(default=Yes)}{1-P(default=Yes)}\right)
+=
+\beta_0+\beta_1 balance+\beta_2 income+\beta_3 student
+\quad\Rightarrow\quad \beta_3<0.
+\]
+结论：在欠款余额和收入相同的条件下，学生反而比非学生更不容易违约。
+
+\vspace{0.3em}
+
+\textbf{为什么符号反转？}
+\begin{itemize}
+    \item \(balance\) 越高，违约概率越高；
+    \item 学生群体平均 \(balance\) 更高；
+    \item 因此只看 \(student\) 时，模型把 \(balance\) 的影响也归给了学生身份；
+    \item 控制 \(balance\) 后，\(student\) 的条件效应变为负。
+\end{itemize}
+
+\vspace{0.3em}
+
+\textbf{教训：} 边际关系不等于条件关系。一个变量在简单模型中可能为正，
+加入关键控制变量后可能变为负，这就是混淆现象。
+
+\end{example}
+\begin{dxtips}
+    这里欠款不是违约而是花呗待还款。所以不是学生更大概率会违约而是学生倾向于更多欠款，欠款多的违约率高，如果欠款一样多学生的违约率反而少。这个就是我们得注意要控制什么变量，比如探讨学生这个身份会不会引起违约我们就得保证在欠款收入一样的时候比较
+\end{dxtips}
+\begin{note}{多类逻辑回归}
+
+二分类逻辑回归只适用于响应变量只有两类的情况，例如
+\[
+Y \in \{0,1\}.
+\]
+但实际问题中，响应变量可能有多于两类。例如急诊病人可能被诊断为
+\[
+Y \in \{\text{中风},\ \text{服药过量},\ \text{癫痫发作}\}.
+\]
+
+这类问题不能简单把类别编码为 \(1,2,3\)，因为这些类别没有天然顺序，
+数字大小会错误地暗示类别之间存在大小关系和距离关系。
+
+当响应变量有 \(K>2\) 个无序类别时，可以使用\textbf{多类逻辑回归}
+（multinomial logistic regression）。其基本思想是：先选一个类别作为
+\textbf{基准类}（baseline），然后分别建模其他类别相对于基准类的
+对数几率。
+
+若选择第 \(K\) 类作为基准类，则对 \(k=1,\ldots,K-1\)，有
+\[
+\log\left(
+\frac{P(Y=k\mid X=x)}{P(Y=K\mid X=x)}
+\right)
+=
+\beta_{k0}+\beta_{k1}x_1+\cdots+\beta_{kp}x_p.
+\]
+
+因此，每一个非基准类别都会有一组自己的系数。模型最终输出 \(K\) 个类别
+的概率，并且这些概率之和为 \(1\)：
+\[
+\sum_{k=1}^{K}P(Y=k\mid X=x)=1.
+\]
+
+基准类的选择不影响最终预测概率和分类结果，但会影响系数的解释。若选择
+“癫痫发作”为基准类，则“中风”对应的系数表示：某个特征增加一单位时，
+中风相对于癫痫发作的对数几率如何变化。
+
+\end{note}
+\begin{dxtips}
+    多远回归得选一个基准线，算出相对概率再乘基准概率得到最终概率
+\end{dxtips}
+\begin{definition}[Softmax]
+\[
+\mathrm{softmax}(z_i) = \frac{e^{z_i}}{\sum_{j=1}^{n} e^{z_j}},\quad
+\text{如 } [3,1,0] \xrightarrow{e^z} [20.1,\,2.7,\,1] \xrightarrow{\text{归一化}} [0.84,\,0.11,\,0.05]
+\]
+指数 $e^z$ 放大分数差距，实现"带竞争的归一化"，使得分最高的 token 获得大部分注意力权重。
+\end{definition}
+\begin{dxtips}
+    softmax就归一化只不过为了突出重要信息先变成e的指数次方再归一
+\end{dxtips}
+\section{分类方法}
+\begin{itemize}
+    \item \textbf{逻辑回归（判别式模型）：}
+    \[
+    P(Y = k \mid X = x)
+    \]
+    直接建模——给定特征 $x$，样本属于第 $k$ 类的概率。
+
+    \item \textbf{生成式分类模型：}
+    先对每个类内部建模：
+    \[
+    P(X = x \mid Y = k)
+    \]
+    再用贝叶斯公式反推类别概率：
+    \[
+    P(Y = k \mid X = x) = \frac{\pi_k \, f_k(x)}{\displaystyle\sum_{l=1}^{K} \pi_l \, f_l(x)}
+    \]
+    其中：
+    \begin{itemize}
+        \item $\pi_k$：第 $k$ 类的先验概率（该类原本有多常见）
+        \item $f_k(x)$：第 $k$ 类内部特征 $x$ 的概率密度函数
+        \item $P(Y = k \mid X = x)$：最终想要的分类概率
+    \end{itemize}
+\end{itemize}
+\subsection{LDA}
+\begin{dxtips}[什么时候用LDA]
+    \begin{itemize}
+    \item \textbf{3 类以上：} LDA 直接支持多分类，只需对每个类算 $\delta_k(x)$ 再取最大即可。逻辑回归的多分类需要 one-vs-rest 或 softmax，实现更复杂。
+    \item \textbf{特征大致正态：} LDA 假设每类特征服从正态分布，当数据满足这一条件时，LDA 的估计是理论最优的。
+    \item \textbf{样本量不大：} LDA 只需估计每类均值 $\hat\mu_k$ 和共享协方差 $\hat\Sigma$，在小样本下比逻辑回归的 MLE 更稳定，不会出现不收敛的问题。
+\end{itemize}
+\end{dxtips}
+\begin{definition}{线性判别分析（LDA）}
+线性判别分析（Linear Discriminant Analysis, LDA）是一种生成式分类方法。
+设
+\[
+Y\in\{1,2,\ldots,K\},\qquad X\in\mathbb{R}^p.
+\]
+LDA 假设每一类中的特征服从多元正态分布，且各类共享同一个协方差矩阵：
+\[
+X\mid Y=k \sim N(\mu_k,\Sigma).
+\]
+其分类规则为：
+\[
+\hat{Y}=\arg\max_k P(Y=k\mid X=x).
+\]
+等价地，LDA 选择使下列判别函数最大的类别：
+\[
+\delta_k(x)
+=
+x^T\Sigma^{-1}\mu_k
+-
+\frac{1}{2}\mu_k^T\Sigma^{-1}\mu_k
++
+\log \pi_k.
+\]
+\end{definition}
+
+\begin{note}
+LDA 的思想是：先估计每一类中 \(X\) 的分布，再用贝叶斯公式反推出
+\(P(Y=k\mid X=x)\)。其中 \(\pi_k\) 是第 \(k\) 类的先验概率，
+\(\mu_k\) 是第 \(k\) 类的均值，\(\Sigma\) 是共享协方差矩阵。
+
+由于各类共享同一个 \(\Sigma\)，比较不同类别时二次项会抵消，
+所以分类边界是线性的。
+\end{note}
+\begin{dxtips}
+    线性来自共享协方差矩阵。“共享协方差矩阵”意思是：
+不同类别的特征分布，可以有不同的均值，但假设它们有相同的形状和方向。他的最后得分是样本和k类匹配度+对第k类位置的修正+原本样本中第k类出现的概率。
+x特征向量转置乘协方差矩阵的逆
+\end{dxtips}
+
+\begin{definition}{马氏距离}
+设 \(x\in\mathbb{R}^p\) 是一个样本点，\(\mu\in\mathbb{R}^p\) 是中心点，
+\(\Sigma\) 是协方差矩阵。则 \(x\) 到 \(\mu\) 的马氏距离定义为
+\[
+d_M(x,\mu)
+=
+\sqrt{(x-\mu)^T\Sigma^{-1}(x-\mu)}.
+\]
+等价地，平方马氏距离为
+\[
+d_M^2(x,\mu)
+=
+(x-\mu)^T\Sigma^{-1}(x-\mu).
+\]
+\end{definition}
+
+\begin{note}
+马氏距离是在普通距离中加入协方差结构后的距离。普通欧氏距离默认各特征
+尺度相同、彼此独立；马氏距离通过 \(\Sigma^{-1}\) 同时修正特征尺度和相关性。
+
+直观上：
+\begin{itemize}
+    \item 方差大的方向，差异较常见，距离被压低；
+    \item 方差小的方向，差异更异常，距离被放大；
+    \item 高度相关的特征会被去冗余，避免重复计算同一类信息。
+\end{itemize}
+
+因此，在 LDA 中，\(\Sigma^{-1}\) 的作用是用数据自身的波动规律来衡量
+样本 \(x\) 距离类别中心 \(\mu_k\) 有多远。
+\end{note}
+\begin{definition}{协方差矩阵}
+设 $X = (X_1, \dots, X_p)^\top$ 为 $p$ 维随机向量，其协方差矩阵定义为：
+
+\[
+\Sigma = \begin{pmatrix}
+\text{Var}(X_1) & \text{Cov}(X_1, X_2) & \cdots & \text{Cov}(X_1, X_p) \\
+\text{Cov}(X_2, X_1) & \text{Var}(X_2) & \cdots & \text{Cov}(X_2, X_p) \\
+\vdots & \vdots & \ddots & \vdots \\
+\text{Cov}(X_p, X_1) & \text{Cov}(X_p, X_2) & \cdots & \text{Var}(X_p)
+\end{pmatrix}
+\]
+
+其中每个元素为：
+
+\[
+\Sigma_{ij} = \text{Cov}(X_i, X_j) = \frac{1}{n-1}\sum_{k=1}^{n}(x_{ki} - \bar{x}_i)(x_{kj} - \bar{x}_j)
+\]
+
+简言之，协方差矩阵就是把每对特征的协方差算出来，按 $(i,j)$ 位置排成一个 $p \times p$ 方阵。对角线上是各特征的方差，非对角线上是特征间的协方差。
+\end{definition}
+\begin{dxtips}[拿到一个矩阵就要分解它]
+协方差矩阵的\textbf{特征分解}（谱分解）：
+
+\[
+\Sigma = Q \Lambda Q^\top
+\]
+
+\begin{itemize}
+    \item $Q$：特征向量组成的正交矩阵，表示\textbf{新坐标系的方向}。在二维情况下，$Q$ 的两列就是椭圆的长轴和短轴方向。
+    \item $\Lambda = \text{diag}(\lambda_1, \dots, \lambda_p)$：特征值组成的对角矩阵，表示\textbf{各方向上的方差大小}。特征值越大，该方向上的数据波动越大。
+\end{itemize}
+
+直观理解：$\Sigma$ 描述了一个 $p$ 维椭球。$Q$ 告诉你这椭球朝哪个方向转，$\Lambda$ 告诉你在每个方向上的半径（拉伸）有多大。
+\end{dxtips}
+\begin{note}{$\Sigma^{-1}$ 的加权意义}
+
+\textbf{特征独立时：}
+\[
+\Sigma = \begin{pmatrix}\sigma_1^2 & 0\\0 & \sigma_2^2\end{pmatrix},\qquad
+\Sigma^{-1} = \begin{pmatrix}1/\sigma_1^2 & 0\\0 & 1/\sigma_2^2\end{pmatrix}
+\]
+\[
+d_M^2(x,\mu) = \frac{(x_1-\mu_1)^2}{\sigma_1^2} + \frac{(x_2-\mu_2)^2}{\sigma_2^2}
+\]
+方差大的特征权重小，方差小的特征权重大。
+
+\textbf{特征相关时：}
+\[
+\Sigma = \begin{pmatrix}\sigma_1^2 & \sigma_{12}\\\sigma_{12} & \sigma_2^2\end{pmatrix},\qquad
+\Sigma^{-1} = \frac{1}{\sigma_1^2\sigma_2^2 - \sigma_{12}^2}
+\begin{pmatrix}\sigma_2^2 & -\sigma_{12}\\-\sigma_{12} & \sigma_1^2\end{pmatrix}
+\]
+\[
+d_M^2 = \frac{1}{1-\rho^2}\left[
+\frac{(x_1-\mu_1)^2}{\sigma_1^2} - 2\rho\frac{(x_1-\mu_1)(x_2-\mu_2)}{\sigma_1\sigma_2} + \frac{(x_2-\mu_2)^2}{\sigma_2^2}
+\right]
+\]
+其中 $\rho = \frac{\sigma_{12}}{\sigma_1\sigma_2}$。$\Sigma^{-1}$ 不仅按方差加权，还通过协方差结构去除冗余信息。
+\end{note}
 \chapter{控制过拟合}
 \chapter{发现隐藏结构}
 \chapter{PCA}
