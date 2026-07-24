@@ -470,5 +470,34 @@ F_{m-1}(x)
 \begin{dxtips}
     叶子节点可以理解为决策树分叉路径的末端，是模型真正给出输出值的位置。样本从根节点进入树后，会根据每个分裂条件不断向下选择路径，最终落到某个叶子节点；该叶子节点的输出值 $\gamma_{jm}$ 就是这棵树对该样本给出的修正量。
 \end{dxtips}
+\subsection{XGBoosting}
+\begin{definition}[XGBoost]
+XGBoost（Extreme Gradient Boosting）是一种高效、可扩展的
+梯度提升决策树（Gradient Boosting Decision Tree, GBDT）算法实现。
+它通过逐轮训练多棵决策树，使每一棵新树修正前面模型的预测误差，
+并将所有树的输出累加形成最终预测模型。
+
+相比普通 GBDT，XGBoost 在目标函数中加入了正则化项，
+并利用一阶梯度和二阶梯度信息来优化每一轮的树结构与叶子节点权重，
+因此通常具有更强的泛化能力、更好的过拟合控制能力和更高的训练效率。
+\end{definition}
+\begin{itemize}
+  \item \textbf{二阶梯度信息：}GBRT 通常只利用一阶梯度，XGBoost 同时利用一阶梯度和二阶梯度，
+  因而对损失函数的局部近似更精细。
+
+  \item \textbf{正则化项：}XGBoost 在目标函数中加入树复杂度惩罚，
+  例如叶子节点数量和叶子权重大小，用来控制模型复杂度、缓解过拟合。
+
+  \item \textbf{更精细的叶子节点权重计算：}XGBoost 不只是让新树拟合残差，
+  而是根据目标函数的近似形式直接求每个叶子节点的最优输出值。
+
+  \item \textbf{列采样与行采样：}XGBoost 支持对特征和样本进行采样，
+  类似随机森林的一部分思想，可以降低过拟合并提升训练效率。
+
+  \item \textbf{缺失值自动处理：}XGBoost 可以在训练过程中自动学习缺失值应该走向哪个分支。
+
+  \item \textbf{工程优化：}XGBoost 对并行计算、稀疏特征、缓存访问和分布式训练做了优化，
+  因此在大规模表格数据上训练速度和可扩展性更好。
+\end{itemize}
 \chapter{训练神经网络}
 \chapter{调优与上线意识}
