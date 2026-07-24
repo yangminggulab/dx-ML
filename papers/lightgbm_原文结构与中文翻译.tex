@@ -1,0 +1,372 @@
+\chapter{LightGBM: A Highly Efficient Gradient Boosting Decision Tree}
+
+\begin{note}
+完整英文原文见本地 PDF：
+\texttt{papers/lightgbm\_a\_highly\_efficient\_gradient\_boosting\_decision\_tree.pdf}。
+本章保留原论文标题、章节结构、核心公式、算法与图表位置，便于和 PDF 原文逐节对照。
+\end{note}
+
+\section{Abstract}
+
+\textbf{原文位置：}PDF p.1，Abstract。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item GBDT is popular and effective, with implementations such as XGBoost and pGBRT.
+  \item Existing implementations are inefficient when feature dimension and data size are large.
+  \item The paper proposes Gradient-based One-Side Sampling (GOSS).
+  \item The paper proposes Exclusive Feature Bundling (EFB).
+  \item LightGBM combines GOSS and EFB and can speed up conventional GBDT by over 20 times with almost the same accuracy.
+\end{itemize}
+
+\section{1 Introduction}
+
+\textbf{原文位置：}PDF p.1--p.2，Section 1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item GBDT is widely used because of efficiency, accuracy and interpretability.
+  \item Big data brings new challenges in both number of features and number of instances.
+  \item Conventional GBDT scans all data instances for all possible split points, so complexity depends on both data size and feature size.
+  \item The natural acceleration direction is to reduce data instances and reduce features.
+  \item GOSS reduces data instances.
+  \item EFB reduces effective feature number.
+  \item The new algorithm with GOSS and EFB is called LightGBM.
+\end{itemize}
+
+\section{2 Preliminaries}
+
+\subsection{2.1 GBDT and Its Complexity Analysis}
+
+\textbf{原文位置：}PDF p.2，Section 2.1，Algorithm 1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item GBDT is an ensemble model of decision trees trained in sequence.
+  \item Each iteration fits negative gradients, also known as residual errors.
+  \item The main cost is learning decision trees.
+  \item The most time-consuming part is finding best split points.
+  \item Histogram-based algorithm buckets continuous feature values into discrete bins.
+  \item Histogram building costs $O(\#data\times \#feature)$.
+  \item Split point finding costs $O(\#bin\times \#feature)$.
+  \item Since $\#bin$ is much smaller than $\#data$, histogram building dominates computational complexity.
+\end{itemize}
+
+\subsection{2.2 Related Work}
+
+\textbf{原文位置：}PDF p.2--p.3，Section 2.2。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Existing GBDT implementations include XGBoost, pGBRT, scikit-learn and R gbm.
+  \item XGBoost supports both pre-sorted and histogram-based algorithms.
+  \item Random data sampling can hurt accuracy in GBDT.
+  \item Feature filtering depends on redundancy assumptions and may hurt accuracy.
+  \item Sparse data are common in large-scale real applications.
+  \item Histogram-based GBDT lacks efficient sparse optimization in previous systems.
+  \item LightGBM addresses these limits with GOSS and EFB.
+\end{itemize}
+
+\section{3 Gradient-based One-Side Sampling}
+
+\subsection{3.1 Algorithm Description}
+
+\textbf{原文位置：}PDF p.3--p.4，Section 3.1，Algorithm 2。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item AdaBoost has sample weights, but GBDT has no native sample weights.
+  \item Gradients in GBDT provide useful information for sampling.
+  \item Small-gradient instances are already well trained.
+  \item Simply dropping small-gradient instances changes data distribution.
+  \item GOSS keeps all large-gradient instances and randomly samples small-gradient instances.
+  \item Sampled small-gradient instances are multiplied by $\frac{1-a}{b}$ when computing information gain.
+\end{itemize}
+
+\subsection{3.2 Theoretical Analysis}
+
+\textbf{原文位置：}PDF p.4--p.5，Section 3.2，Definition 3.1，Theorem 3.2。
+
+\textbf{原文公式：}
+\[
+  \tilde{V}_j(d)
+  =
+  \frac{1}{n}
+  \left[
+    \frac{
+      \left(
+        \sum_{x_i\in A_l}g_i
+        +
+        \frac{1-a}{b}\sum_{x_i\in B_l}g_i
+      \right)^2
+    }{n_l^j(d)}
+    +
+    \frac{
+      \left(
+        \sum_{x_i\in A_r}g_i
+        +
+        \frac{1-a}{b}\sum_{x_i\in B_r}g_i
+      \right)^2
+    }{n_r^j(d)}
+  \right].
+\]
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item GOSS uses an estimated variance gain $\tilde{V}_j(d)$ on subset $A\cup B$.
+  \item $A$ contains large-gradient instances.
+  \item $B$ contains sampled small-gradient instances.
+  \item The coefficient $\frac{1-a}{b}$ normalizes the small-gradient subset back to the scale of the original small-gradient data.
+  \item Theorem 3.2 bounds the approximation error of GOSS.
+  \item Random sampling is a special case of GOSS when $a=0$.
+  \item GOSS can outperform random sampling under the same sampling ratio.
+\end{itemize}
+
+\section{4 Exclusive Feature Bundling}
+
+\textbf{原文位置：}PDF p.5--p.6，Section 4，Algorithm 3，Algorithm 4，Theorem 4.1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item High-dimensional data are usually sparse.
+  \item Many sparse features are mutually exclusive.
+  \item Mutually exclusive features rarely take nonzero values simultaneously.
+  \item Exclusive features can be bundled into a single feature bundle.
+  \item Histogram building complexity changes from $O(\#data\times \#feature)$ to $O(\#data\times \#bundle)$.
+  \item Finding the optimal bundling strategy is NP-hard.
+  \item LightGBM reduces the bundling problem to graph coloring and uses a greedy algorithm.
+  \item Features in one bundle are merged by assigning different bin ranges through offsets.
+\end{itemize}
+
+\section{5 Experiments}
+
+\textbf{原文位置：}PDF p.6--p.8，Section 5，Table 1，Table 2，Table 3，Figure 1，Figure 2。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Experiments use five public datasets: Allstate, Flight Delay, LETOR, KDD10 and KDD12.
+  \item Datasets cover sparse features, dense features, binary classification and ranking.
+  \item Baselines include XGBoost and LightGBM without GOSS/EFB.
+  \item LightGBM is the fastest while maintaining almost the same accuracy.
+  \item Compared with lgb\_baseline, LightGBM speeds up training by 21x, 6x, 1.6x, 14x and 13x on five datasets.
+  \item XGBoost histogram version runs out of memory on KDD10 and KDD12.
+  \item GOSS and EFB do not hurt accuracy while bringing speed-up.
+\end{itemize}
+
+\subsection{5.1 Overall Comparison}
+
+\textbf{原文位置：}PDF p.6--p.8，Section 5.1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost and lgb\_baseline are used as baselines.
+  \item xgb\_exa uses pre-sorted algorithm.
+  \item xgb\_his uses histogram-based algorithm.
+  \item LightGBM combines lgb\_baseline with GOSS and EFB.
+  \item LightGBM achieves large training speed-up with nearly unchanged accuracy.
+\end{itemize}
+
+\subsection{5.2 Analysis on GOSS}
+
+\textbf{原文位置：}PDF p.8，Section 5.2，Table 4。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item GOSS alone can bring nearly 2x speed-up using 10\%--20\% data.
+  \item GOSS still needs full-data prediction and gradient computation, so speed-up is not linear in sampling ratio.
+  \item GOSS is compared with Stochastic Gradient Boosting (SGB).
+  \item Under the same sampling ratio, GOSS is consistently more accurate than SGB.
+\end{itemize}
+
+\subsection{5.3 Analysis on EFB}
+
+\textbf{原文位置：}PDF p.8，Section 5.3。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item EFB contribution is measured by comparing lgb\_baseline and EFB\_only.
+  \item EFB gives significant speed-up on large-scale sparse datasets.
+  \item EFB merges one-hot and implicitly exclusive sparse features into fewer features.
+  \item Bundling improves spatial locality and cache hit rate.
+\end{itemize}
+
+\section{6 Conclusion}
+
+\textbf{原文位置：}PDF p.8，Section 6。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item LightGBM is a new GBDT algorithm with GOSS and EFB.
+  \item GOSS handles large numbers of data instances.
+  \item EFB handles large numbers of features.
+  \item Theory and experiments show that LightGBM improves speed and memory consumption while maintaining accuracy.
+  \item Future work includes choosing optimal $a$ and $b$ in GOSS and improving EFB.
+\end{itemize}
+
+\chapter{《LightGBM: A Highly Efficient Gradient Boosting Decision Tree》中文版}
+
+\section{摘要}
+
+梯度提升决策树（GBDT）是一种流行的机器学习算法，并且已经有 XGBoost 和 pGBRT 等有效实现。
+尽管这些实现采用了许多工程优化，但当特征维度很高、数据规模很大时，它们的效率和可扩展性仍然不够理想。
+主要原因是：对于每个特征，算法都需要扫描所有数据样本，以估计所有可能切分点的信息增益，这非常耗时。
+
+为了解决这个问题，论文提出了两种新技术：基于梯度的单边采样
+（Gradient-based One-Side Sampling, GOSS）和互斥特征捆绑
+（Exclusive Feature Bundling, EFB）。GOSS 会排除大量小梯度样本，
+只使用剩余样本估计信息增益。由于大梯度样本在信息增益计算中更重要，
+GOSS 可以用更小的数据量获得较准确的信息增益估计。EFB 将互斥特征捆绑在一起，
+从而减少特征数量。结合 GOSS 和 EFB 的新 GBDT 实现被称为 LightGBM。
+实验表明，LightGBM 在几乎保持相同精度的同时，可以使传统 GBDT 训练速度提升超过 20 倍。
+
+\section{1 引言}
+
+GBDT 因效率、精度和可解释性而被广泛使用，在多分类、点击预测、学习排序等任务中表现突出。
+随着数据规模和特征数量不断增大，GBDT 面临精度与效率之间的新挑战。
+传统 GBDT 实现通常需要对每个特征扫描所有样本，以估计所有候选切分点的信息增益。
+因此，其计算复杂度同时依赖样本数量和特征数量，当数据很大时会非常耗时。
+
+一个直接的加速思路是减少样本数量和特征数量，但这并不简单。
+对于样本，GBDT 没有像 AdaBoost 那样的天然样本权重，因此不能直接使用 AdaBoost 的采样方法。
+LightGBM 观察到，梯度大小可以反映样本对信息增益的重要性，于是提出 GOSS：
+保留大梯度样本，只随机丢弃小梯度样本。对于特征，实际高维特征空间通常很稀疏，
+很多特征几乎不会同时非零，因此可以将这些互斥特征捆绑成更少的特征，这就是 EFB。
+
+\section{2 预备知识}
+
+\subsection{2.1 GBDT 及其复杂度分析}
+
+GBDT 是由按顺序训练的多棵决策树组成的集成模型。每次迭代中，GBDT 通过拟合损失函数的负梯度
+来训练新的决策树。GBDT 的主要计算成本在于学习决策树，而学习决策树最耗时的部分是寻找最佳分裂点。
+
+预排序算法会在排好序的特征值上枚举所有可能分裂点，虽然可以找到最优分裂点，但训练速度和内存消耗都较差。
+直方图算法将连续特征值离散为若干桶，并在训练中构建特征直方图。该算法在内存和速度上更高效，
+因此 LightGBM 在直方图算法基础上展开。
+
+直方图构建的复杂度为 $O(\#data\times \#feature)$，
+寻找分裂点的复杂度为 $O(\#bin\times \#feature)$。
+由于桶数量通常远小于样本数量，直方图构建主导了整体计算复杂度。
+因此，如果能减少样本数或特征数，就能显著加速 GBDT 训练。
+
+\subsection{2.2 相关工作}
+
+已有 GBDT 实现包括 XGBoost、pGBRT、scikit-learn 和 R 中的 gbm。
+scikit-learn 和 R gbm 使用预排序算法，pGBRT 使用直方图算法，XGBoost 同时支持预排序和直方图算法。
+为了减少训练数据规模，常见方法是下采样样本，但随机采样可能损害 GBDT 精度。
+为了减少特征数量，也可以过滤弱特征，但这依赖特征冗余假设，实践中不一定成立。
+
+实际大规模数据通常非常稀疏。预排序算法可以通过忽略零值降低训练成本，
+但直方图算法之前缺少有效的稀疏优化方案。LightGBM 正是为了解决这些限制，提出了 GOSS 和 EFB。
+
+\section{3 基于梯度的单边采样}
+
+\subsection{3.1 算法描述}
+
+在 AdaBoost 中，样本权重可以表示样本重要性。但 GBDT 没有天然样本权重，
+因此 AdaBoost 的采样方法不能直接使用。LightGBM 注意到，GBDT 中每个样本的梯度提供了有用的采样信息。
+如果一个样本梯度很小，说明该样本训练误差较小，已经被模型学得比较好。
+
+直接丢弃小梯度样本会改变数据分布，从而损害模型精度。GOSS 的做法是：
+保留所有大梯度样本，并从小梯度样本中随机采样一部分。为了补偿数据分布变化，
+在计算信息增益时，对被采样的小梯度样本乘以常数 $\frac{1-a}{b}$。
+这样既能更关注欠训练样本，又不会过度改变原始数据分布。
+
+\subsection{3.2 理论分析}
+
+GBDT 使用决策树从输入空间学习到梯度空间的函数。对某个固定节点，特征 $j$ 在切分点 $d$ 上的信息增益
+可以用分裂后的方差增益表示。GOSS 将样本按梯度绝对值降序排列，保留前 $a\times 100\%$ 的大梯度样本形成集合 $A$，
+再从剩余小梯度样本中随机采样比例为 $b$ 的集合 $B$。
+
+GOSS 在 $A\cup B$ 上估计方差增益：
+\[
+  \tilde{V}_j(d)
+  =
+  \frac{1}{n}
+  \left[
+    \frac{
+      \left(
+        \sum_{x_i\in A_l}g_i
+        +
+        \frac{1-a}{b}\sum_{x_i\in B_l}g_i
+      \right)^2
+    }{n_l^j(d)}
+    +
+    \frac{
+      \left(
+        \sum_{x_i\in A_r}g_i
+        +
+        \frac{1-a}{b}\sum_{x_i\in B_r}g_i
+      \right)^2
+    }{n_r^j(d)}
+  \right].
+\]
+
+其中 $\frac{1-a}{b}$ 用于把小梯度采样集合的梯度和归一化回原始小梯度数据规模。
+论文的定理表明，GOSS 的近似误差可以被控制，并且随机采样是 $a=0$ 时的特殊情形。
+在许多情况下，GOSS 在相同采样率下可以优于随机采样。
+
+\section{4 互斥特征捆绑}
+
+高维数据通常非常稀疏，这为近似无损地减少特征数量提供了可能。
+在稀疏特征空间中，很多特征是互斥的，也就是说它们几乎不会同时取非零值。
+这些互斥特征可以被安全地捆绑成一个特征，称为互斥特征束。
+
+通过精心设计的特征扫描算法，可以从特征束中构建出与单独特征相同的直方图。
+这样，直方图构建复杂度可以从
+$O(\#data\times \#feature)$ 降为
+$O(\#data\times \#bundle)$，其中 $\#bundle$ 远小于 $\#feature$。
+
+EFB 需要解决两个问题：第一，哪些特征应该捆绑在一起；第二，如何构造捆绑后的特征。
+论文证明，寻找最少互斥特征束的最优划分是 NP-hard 问题。
+因此，LightGBM 将该问题转化为图着色问题：把特征看作顶点，如果两个特征不互斥，就在它们之间连边；
+然后使用贪婪算法得到近似解。
+
+对于特征合并，关键是要保证原始特征值仍能从特征束中识别出来。
+由于直方图算法存储的是离散桶，LightGBM 可以通过给不同特征的桶添加偏移量，
+让多个互斥特征占据不同的桶区间，从而安全地合并成一个特征束。
+
+\section{5 实验}
+
+论文使用五个公开数据集：Allstate、Flight Delay、LETOR、KDD10 和 KDD12。
+这些数据集覆盖稀疏特征、稠密特征、二分类和排序任务。
+实验环境是一台 Linux 服务器，使用两颗 E5-2670 v3 CPU，共 24 核和 256GB 内存。
+
+\subsection{5.1 整体比较}
+
+实验使用 XGBoost 和不含 GOSS/EFB 的 LightGBM 版本作为基线。
+XGBoost 分为预排序版本 xgb\_exa 和直方图版本 xgb\_his。
+LightGBM 则是在 lgb\_baseline 基础上加入 GOSS 和 EFB。
+
+结果表明，LightGBM 在几乎保持相同测试精度的同时训练最快。
+与 lgb\_baseline 相比，LightGBM 在 Allstate、Flight Delay、LETOR、KDD10、KDD12
+上的训练加速比分别为 21 倍、6 倍、1.6 倍、14 倍和 13 倍。
+XGBoost 的直方图版本在 KDD10 和 KDD12 上由于内存不足无法运行。
+这些结果说明，GOSS 和 EFB 在带来显著加速的同时不会损害精度。
+
+\subsection{5.2 GOSS 分析}
+
+通过比较 LightGBM 和 EFB\_only，论文分析 GOSS 的加速能力。
+结果显示，在只使用 10\%--20\% 数据的情况下，GOSS 本身可以带来接近 2 倍的加速。
+不过 GOSS 仍然需要在全量数据上进行预测和计算梯度，因此整体加速并不会与采样比例完全线性相关。
+
+论文还将 GOSS 与随机梯度提升（SGB）比较。在相同采样率下，GOSS 的精度始终高于 SGB。
+这说明 GOSS 是比普通随机采样更有效的采样方法。
+
+\subsection{5.3 EFB 分析}
+
+论文通过比较 lgb\_baseline 和 EFB\_only 来分析 EFB 的贡献。
+结果显示，EFB 在大规模稀疏数据集上可以带来显著加速。
+这是因为 EFB 将大量 one-hot 特征和隐式互斥稀疏特征合并成更少的特征。
+此外，由于许多原本分散的特征被捆绑在一起，空间局部性和缓存命中率也会提升。
+因此，EFB 是直方图算法中利用稀疏性的有效方法。
+
+\section{6 结论}
+
+本文提出了一种新的 GBDT 算法 LightGBM，其中包含两项新技术：
+基于梯度的单边采样（GOSS）和互斥特征捆绑（EFB）。
+GOSS 用于处理大量样本，EFB 用于处理大量特征。
+论文对两项技术进行了理论分析和实验验证。
+实验结果与理论分析一致，表明在 GOSS 和 EFB 的帮助下，LightGBM 可以在计算速度和内存消耗方面显著优于
+XGBoost 和 SGB，同时保持相近精度。未来工作包括研究 GOSS 中 $a$ 和 $b$ 的最优选择，
+以及继续提升 EFB 在更多特征场景下的表现。
+

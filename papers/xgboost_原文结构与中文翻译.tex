@@ -1,0 +1,566 @@
+\chapter{XGBoost: A Scalable Tree Boosting System}
+
+\begin{note}
+完整英文原文见本地 PDF：
+\texttt{papers/xgboost\_a\_scalable\_tree\_boosting\_system.pdf}。
+本章保留原论文标题、章节结构、核心公式、算法与图表位置，便于和 PDF 原文逐节对照。
+\end{note}
+
+\section{ABSTRACT}
+
+\textbf{原文位置：}PDF p.1，ABSTRACT。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Tree boosting is highly effective and widely used.
+  \item The paper describes XGBoost as a scalable end-to-end tree boosting system.
+  \item Main contributions include sparsity-aware learning, weighted quantile sketch, cache-aware access, compression and sharding.
+\end{itemize}
+
+\section{1. INTRODUCTION}
+
+\textbf{原文位置：}PDF p.1--p.2，Section 1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Large-scale machine learning needs both effective statistical models and scalable learning systems.
+  \item Gradient tree boosting is strong in classification, ranking, ad click-through rate prediction and machine learning competitions.
+  \item XGBoost is motivated by scalability in single-machine, distributed and out-of-core settings.
+  \item The paper lists four major contributions:
+  \begin{itemize}
+    \item scalable end-to-end tree boosting system;
+    \item weighted quantile sketch;
+    \item sparsity-aware parallel tree learning;
+    \item cache-aware block structure for out-of-core learning.
+  \end{itemize}
+\end{itemize}
+
+\section{2. TREE BOOSTING IN A NUTSHELL}
+
+\subsection{2.1 Regularized Learning Objective}
+
+\textbf{原文位置：}PDF p.2，Section 2.1。
+
+\textbf{原文公式：}
+\[
+  \hat{y}_i=\phi(x_i)=\sum_{k=1}^{K}f_k(x_i),\qquad f_k\in\mathcal{F}.
+\]
+
+\[
+  \mathcal{L}(\phi)=\sum_i l(\hat{y}_i,y_i)+\sum_k\Omega(f_k).
+\]
+
+\[
+  \Omega(f)=\gamma T+\frac{1}{2}\lambda \lVert w\rVert^2.
+\]
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Model prediction is the sum of $K$ regression trees.
+  \item The objective is training loss plus tree complexity penalty.
+  \item Regularization controls overfitting by penalizing leaf number and leaf weights.
+\end{itemize}
+
+\subsection{2.2 Gradient Tree Boosting}
+
+\textbf{原文位置：}PDF p.2--p.3，Section 2.2。
+
+\textbf{原文公式：}
+\[
+  \mathcal{L}^{(t)}
+  =
+  \sum_{i=1}^{n}
+  l\bigl(y_i,\hat{y}_i^{(t-1)}+f_t(x_i)\bigr)
+  +
+  \Omega(f_t).
+\]
+
+\[
+  \tilde{\mathcal{L}}^{(t)}
+  =
+  \sum_{i=1}^{n}
+  \left[
+    g_i f_t(x_i)+\frac{1}{2}h_i f_t^2(x_i)
+  \right]
+  +
+  \Omega(f_t).
+\]
+
+\[
+  g_i=\partial_{\hat{y}^{(t-1)}}l(y_i,\hat{y}^{(t-1)}),
+  \qquad
+  h_i=\partial^2_{\hat{y}^{(t-1)}}l(y_i,\hat{y}^{(t-1)}).
+\]
+
+\[
+  I_j=\{i\mid q(x_i)=j\}.
+\]
+
+\[
+  w_j^*
+  =
+  -
+  \frac{\sum_{i\in I_j}g_i}
+       {\sum_{i\in I_j}h_i+\lambda}.
+\]
+
+\[
+  \tilde{\mathcal{L}}^{(t)}(q)
+  =
+  -
+  \frac{1}{2}
+  \sum_{j=1}^{T}
+  \frac{\left(\sum_{i\in I_j}g_i\right)^2}
+       {\sum_{i\in I_j}h_i+\lambda}
+  +
+  \gamma T.
+\]
+
+\[
+  L_{\mathrm{split}}
+  =
+  \frac{1}{2}
+  \left[
+    \frac{\left(\sum_{i\in I_L}g_i\right)^2}{\sum_{i\in I_L}h_i+\lambda}
+    +
+    \frac{\left(\sum_{i\in I_R}g_i\right)^2}{\sum_{i\in I_R}h_i+\lambda}
+    -
+    \frac{\left(\sum_{i\in I}g_i\right)^2}{\sum_{i\in I}h_i+\lambda}
+  \right]
+  -
+  \gamma.
+\]
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Each iteration adds a new tree $f_t$.
+  \item XGBoost uses second-order Taylor approximation.
+  \item The optimal leaf weight can be computed from first-order and second-order gradient statistics.
+  \item Split gain is derived from the regularized objective.
+\end{itemize}
+
+\subsection{2.3 Shrinkage and Column Subsampling}
+
+\textbf{原文位置：}PDF p.3，Section 2.3。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Shrinkage scales newly added tree weights by a factor $\eta$.
+  \item Column subsampling borrows an idea from Random Forest.
+  \item Both techniques help prevent overfitting; column subsampling can also speed up computation.
+\end{itemize}
+
+\section{3. SPLIT FINDING ALGORITHMS}
+
+\subsection{3.1 Basic Exact Greedy Algorithm}
+
+\textbf{原文位置：}PDF p.3，Section 3.1，Algorithm 1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Enumerates possible splits over all features.
+  \item Data must be sorted by feature values.
+  \item Gradient statistics are accumulated in sorted order.
+\end{itemize}
+
+\subsection{3.2 Approximate Algorithm}
+
+\textbf{原文位置：}PDF p.3--p.4，Section 3.2，Algorithm 2，Figure 3。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Exact greedy search is expensive when data is too large.
+  \item Approximate algorithm proposes candidate split points by feature percentiles.
+  \item Candidate proposal can be global or local.
+  \item With enough candidates, approximate splitting can match exact greedy accuracy.
+\end{itemize}
+
+\subsection{3.3 Weighted Quantile Sketch}
+
+\textbf{原文位置：}PDF p.4，Section 3.3。
+
+\textbf{原文公式：}
+\[
+  r_k(z)
+  =
+  \frac{1}{\sum_{(x,h)\in D_k}h}
+  \sum_{(x,h)\in D_k,\ x<z}h.
+\]
+
+\[
+  |r_k(s_{k,j})-r_k(s_{k,j+1})|<\epsilon.
+\]
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Approximate splitting needs candidate split points.
+  \item Instance weights are represented by second-order statistics $h_i$.
+  \item XGBoost proposes a distributed weighted quantile sketch with theoretical guarantee.
+\end{itemize}
+
+\subsection{3.4 Sparsity-aware Split Finding}
+
+\textbf{原文位置：}PDF p.4--p.5，Section 3.4，Algorithm 3，Figure 4，Figure 5。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Sparsity can come from missing values, zero entries and one-hot encoding.
+  \item Each split learns a default direction for missing values.
+  \item The algorithm visits only non-missing entries.
+  \item Computation becomes linear in the number of non-missing entries.
+\end{itemize}
+
+\section{4. SYSTEM DESIGN}
+
+\subsection{4.1 Column Block for Parallel Learning}
+
+\textbf{原文位置：}PDF p.5--p.6，Section 4.1，Figure 6。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Data is stored in compressed column format.
+  \item Columns in a block are sorted by feature value.
+  \item The block structure supports parallel split finding and column subsampling.
+\end{itemize}
+
+\subsection{4.2 Cache-aware Access}
+
+\textbf{原文位置：}PDF p.6--p.7，Section 4.2，Figure 7，Figure 8，Figure 9。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Split finding needs indirect access to gradient statistics.
+  \item Cache misses slow down training on large datasets.
+  \item Cache-aware prefetching and proper block size improve performance.
+\end{itemize}
+
+\subsection{4.3 Blocks for Out-of-core Computation}
+
+\textbf{原文位置：}PDF p.7，Section 4.3。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Data is divided into blocks and stored on disk.
+  \item Independent prefetching overlaps disk reading with computation.
+  \item Block compression and block sharding improve disk I/O throughput.
+\end{itemize}
+
+\section{5. RELATED WORKS}
+
+\textbf{原文位置：}PDF p.7--p.8，Section 5。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost implements gradient boosting in functional space.
+  \item It adds regularization, sparsity-aware learning and system-level optimizations.
+  \item Weighted quantile sketch extends classical quantile summary to weighted data.
+\end{itemize}
+
+\section{6. END TO END EVALUATIONS}
+
+\subsection{6.1 System Implementation}
+
+\textbf{原文位置：}PDF p.8，Section 6.1。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost is implemented as an open-source package.
+  \item It supports Python, R, Julia and user-defined objectives.
+  \item Distributed XGBoost supports multiple big-data ecosystems.
+\end{itemize}
+
+\subsection{6.2 Dataset and Setup}
+
+\textbf{原文位置：}PDF p.8--p.9，Section 6.2，Table 2。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Datasets include Allstate, Higgs Boson, Yahoo LTRC and Criteo.
+  \item Tasks include classification, learning to rank and click-through rate prediction.
+  \item Default experimental settings include max depth 8 and shrinkage 0.1.
+\end{itemize}
+
+\subsection{6.3 Classification}
+
+\textbf{原文位置：}PDF p.9，Section 6.3，Table 3。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost is compared with scikit-learn and R GBM on Higgs data.
+  \item XGBoost achieves comparable accuracy and much faster training than scikit-learn.
+\end{itemize}
+
+\subsection{6.4 Learning to Rank}
+
+\textbf{原文位置：}PDF p.9--p.10，Section 6.4，Table 4，Figure 10。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost is evaluated on Yahoo learning-to-rank data.
+  \item Column subsampling reduces runtime and can improve ranking performance.
+\end{itemize}
+
+\subsection{6.5 Out-of-core Experiment}
+
+\textbf{原文位置：}PDF p.10，Section 6.5，Figure 11。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item Compression gives large speedup.
+  \item Sharding across disks further improves throughput.
+  \item XGBoost can process 1.7 billion examples on a single machine.
+\end{itemize}
+
+\subsection{6.6 Distributed Experiment}
+
+\textbf{原文位置：}PDF p.10--p.11，Section 6.6，Figure 12，Figure 13。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost is compared with Spark MLLib and H2O.
+  \item XGBoost scales smoothly to full Criteo data by using out-of-core computation.
+  \item Performance scales with the number of machines.
+\end{itemize}
+
+\section{7. CONCLUSION}
+
+\textbf{原文位置：}PDF p.11，Section 7。
+
+\textbf{结构要点：}
+\begin{itemize}
+  \item XGBoost is a scalable tree boosting system widely used by data scientists.
+  \item The paper proposes sparsity-aware learning and weighted quantile sketch.
+  \item Cache access, data compression and sharding are essential for scalable tree boosting.
+\end{itemize}
+
+\chapter{《XGBoost: A Scalable Tree Boosting System》中文版}
+
+\section{摘要}
+
+树提升是一种效果很强、应用很广的机器学习方法。本文介绍了一个可扩展的端到端树提升系统
+XGBoost。该系统被数据科学家广泛使用，并在许多机器学习竞赛中取得领先结果。
+论文提出了面向稀疏数据的稀疏感知算法，以及用于近似树学习的加权分位数草图。
+此外，论文还从缓存访问模式、数据压缩和数据分片等角度总结了如何构建可扩展的树提升系统。
+综合这些设计，XGBoost 能够用比已有系统更少的资源扩展到十亿级样本。
+
+\section{1. 引言}
+
+大规模机器学习应用的成功依赖两个因素：第一，模型本身要足够有效，能够捕捉复杂的数据依赖；
+第二，学习系统要足够可扩展，能够从大规模数据中训练出目标模型。梯度树提升在实际应用中表现突出，
+可用于分类、排序、广告点击率预测等任务。XGBoost 的出现，是为了把树提升方法做成一个在单机、
+分布式和内存受限场景下都能高效运行的系统。
+
+本文的主要贡献包括：构建可扩展的端到端树提升系统；提出有理论保证的加权分位数草图；
+提出用于并行树学习的稀疏感知算法；提出适合外存训练的缓存友好块结构。
+
+\section{2. 树提升简述}
+
+\subsection{2.1 正则化学习目标}
+
+XGBoost 使用加法树模型进行预测。对于第 $i$ 个样本，预测值是多棵回归树输出的总和：
+\[
+  \hat{y}_i=\phi(x_i)=\sum_{k=1}^{K}f_k(x_i),\qquad f_k\in\mathcal{F}.
+\]
+
+模型优化的目标函数由训练损失和正则化惩罚组成：
+\[
+  \mathcal{L}(\phi)=\sum_i l(\hat{y}_i,y_i)+\sum_k\Omega(f_k).
+\]
+
+其中正则化项为：
+\[
+  \Omega(f)=\gamma T+\frac{1}{2}\lambda \lVert w\rVert^2.
+\]
+
+这里 $T$ 是叶子节点数量，$w$ 是叶子节点权重向量。这个正则项会惩罚过多的叶子节点和过大的叶子权重，
+从而缓解过拟合。
+
+\subsection{2.2 梯度树提升}
+
+XGBoost 采用逐轮加树的方式训练模型。第 $t$ 轮会在已有预测
+$\hat{y}_i^{(t-1)}$ 的基础上加入一棵新树 $f_t$：
+\[
+  \mathcal{L}^{(t)}
+  =
+  \sum_{i=1}^{n}
+  l\bigl(y_i,\hat{y}_i^{(t-1)}+f_t(x_i)\bigr)
+  +
+  \Omega(f_t).
+\]
+
+为了高效优化该目标，XGBoost 使用二阶泰勒展开：
+\[
+  \tilde{\mathcal{L}}^{(t)}
+  =
+  \sum_{i=1}^{n}
+  \left[
+    g_i f_t(x_i)+\frac{1}{2}h_i f_t^2(x_i)
+  \right]
+  +
+  \Omega(f_t).
+\]
+
+其中 $g_i$ 是一阶梯度，$h_i$ 是二阶梯度：
+\[
+  g_i=\partial_{\hat{y}^{(t-1)}}l(y_i,\hat{y}^{(t-1)}),
+  \qquad
+  h_i=\partial^2_{\hat{y}^{(t-1)}}l(y_i,\hat{y}^{(t-1)}).
+\]
+
+对于固定树结构，落入叶子 $j$ 的样本集合记为：
+\[
+  I_j=\{i\mid q(x_i)=j\}.
+\]
+
+叶子节点的最优权重为：
+\[
+  w_j^*
+  =
+  -
+  \frac{\sum_{i\in I_j}g_i}
+       {\sum_{i\in I_j}h_i+\lambda}.
+\]
+
+对应树结构的目标函数得分为：
+\[
+  \tilde{\mathcal{L}}^{(t)}(q)
+  =
+  -
+  \frac{1}{2}
+  \sum_{j=1}^{T}
+  \frac{\left(\sum_{i\in I_j}g_i\right)^2}
+       {\sum_{i\in I_j}h_i+\lambda}
+  +
+  \gamma T.
+\]
+
+节点分裂带来的损失下降为：
+\[
+  L_{\mathrm{split}}
+  =
+  \frac{1}{2}
+  \left[
+    \frac{\left(\sum_{i\in I_L}g_i\right)^2}{\sum_{i\in I_L}h_i+\lambda}
+    +
+    \frac{\left(\sum_{i\in I_R}g_i\right)^2}{\sum_{i\in I_R}h_i+\lambda}
+    -
+    \frac{\left(\sum_{i\in I}g_i\right)^2}{\sum_{i\in I}h_i+\lambda}
+  \right]
+  -
+  \gamma.
+\]
+
+这个分裂增益公式是 XGBoost 选择分裂点的核心依据。
+
+\subsection{2.3 收缩与列采样}
+
+除了正则化目标函数，XGBoost 还使用收缩和列采样来进一步防止过拟合。
+收缩会在每一步树提升后用学习率 $\eta$ 缩放新加入的树权重，使单棵树的影响更保守。
+列采样借鉴随机森林思想，每次只使用部分特征，有助于防止过拟合并加速并行计算。
+
+\section{3. 分裂查找算法}
+
+\subsection{3.1 基本精确贪婪算法}
+
+树学习的关键问题之一是寻找最佳分裂点。精确贪婪算法会枚举所有特征上的可能分裂点。
+为了高效完成这一过程，算法需要先按照特征值对数据排序，然后按排序顺序累积梯度统计量，
+并根据分裂增益公式选择最佳切分。
+
+\subsection{3.2 近似算法}
+
+当数据无法完整放入内存或处于分布式场景时，精确枚举所有分裂点效率很低。
+近似算法先根据特征分布的分位点提出候选切分点，然后将连续特征映射到这些候选切分点形成的桶中，
+在聚合统计量后只在候选分裂点中寻找最优解。候选点可以在建树初始阶段全局提出，
+也可以在每次分裂后局部重新提出。
+
+\subsection{3.3 加权分位数草图}
+
+近似算法的重要步骤是提出候选切分点。XGBoost 使用二阶梯度统计量作为样本权重，
+定义特征上的加权秩函数：
+\[
+  r_k(z)
+  =
+  \frac{1}{\sum_{(x,h)\in D_k}h}
+  \sum_{(x,h)\in D_k,\ x<z}h.
+\]
+
+候选切分点需要满足：
+\[
+  |r_k(s_{k,j})-r_k(s_{k,j+1})|<\epsilon.
+\]
+
+为处理带权数据的近似分位数问题，论文提出了有理论保证的分布式加权分位数草图算法。
+
+\subsection{3.4 稀疏感知分裂查找}
+
+实际数据中稀疏性很常见，来源包括缺失值、统计中的零值以及 one-hot 编码等特征工程结果。
+XGBoost 在每个树节点中加入默认方向。当分裂所需的特征值缺失时，样本会走向默认方向。
+这个默认方向由数据学习得到。算法只遍历非缺失项，因此计算复杂度与非缺失项数量线性相关。
+
+\section{4. 系统设计}
+
+\subsection{4.1 用于并行学习的列块}
+
+树学习中最耗时的部分是让数据进入排序状态。XGBoost 将数据存储为压缩列格式的块，
+每一列按照对应特征值排序。这个结构只需要在训练前构建一次，之后的迭代可以重复使用。
+列块结构支持并行分裂查找，也支持列采样。
+
+\subsection{4.2 缓存感知访问}
+
+虽然列块结构降低了分裂查找的计算复杂度，但算法需要按照行索引间接访问梯度统计量。
+这种非连续内存访问可能导致缓存未命中，从而拖慢训练。XGBoost 使用缓存感知预取，
+并为近似算法选择合适的块大小，在并行效率和缓存命中之间取得平衡。
+
+\subsection{4.3 用于外存计算的块}
+
+为了处理无法放入主内存的数据，XGBoost 将数据划分为多个块并存储在磁盘上。
+训练时通过独立线程预取数据块，使磁盘读取和计算并行进行。论文还使用块压缩和多磁盘分片，
+以降低磁盘 I/O 成本并提升吞吐量。
+
+\section{5. 相关工作}
+
+XGBoost 实现的是函数空间中的梯度提升。与已有方法相比，XGBoost 加入正则化以防止过拟合，
+引入列采样和稀疏感知学习，并把缓存访问、外存计算等系统优化纳入端到端系统设计。
+加权分位数草图则把经典分位数摘要问题扩展到了带权数据场景。
+
+\section{6. 端到端评估}
+
+\subsection{6.1 系统实现}
+
+XGBoost 被实现为开源包，支持多种加权分类、排序目标函数以及用户自定义目标函数。
+它可用于 Python、R、Julia 等语言，并能够和 scikit-learn 等数据科学工具链集成。
+分布式版本还可以运行在 Hadoop、MPI、Spark、Flink 等生态中。
+
+\subsection{6.2 数据集与实验设置}
+
+论文使用 Allstate、Higgs Boson、Yahoo LTRC 和 Criteo 四个数据集。
+这些任务分别覆盖保险索赔分类、高能物理事件分类、学习排序和点击率预测。
+实验通常使用最大深度 8、收缩率 0.1 的树提升配置。
+
+\subsection{6.3 分类}
+
+在 Higgs 数据集上，XGBoost 与 scikit-learn 和 R GBM 进行比较。
+实验结果表明，XGBoost 能达到与 scikit-learn 相近的精度，同时训练速度明显更快。
+
+\subsection{6.4 学习排序}
+
+在 Yahoo LTRC 排序数据集上，XGBoost 与 pGBRT 比较。
+结果显示 XGBoost 训练更快，列采样不仅减少运行时间，也可能提升排序表现。
+
+\subsection{6.5 外存实验}
+
+在 Criteo 数据上，XGBoost 评估了外存计算能力。
+实验表明，压缩可以显著加速计算，多磁盘分片可以进一步提升速度。
+最终系统能够在单机上处理 17 亿样本。
+
+\subsection{6.6 分布式实验}
+
+论文还在分布式场景下比较 XGBoost、Spark MLLib 和 H2O。
+XGBoost 借助外存计算能够平滑扩展到完整 Criteo 数据，并且随着机器数量增加表现出良好扩展性。
+
+\section{7. 结论}
+
+本文总结了构建 XGBoost 这一可扩展树提升系统的经验。XGBoost 被广泛用于数据科学任务，
+并在许多问题上取得领先结果。论文提出了处理稀疏数据的稀疏感知算法和用于近似学习的加权分位数草图。
+实践经验表明，缓存访问模式、数据压缩和数据分片是构建端到端可扩展树提升系统的关键要素。
+
