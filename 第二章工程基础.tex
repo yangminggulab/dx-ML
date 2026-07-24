@@ -288,6 +288,9 @@ OOB 误差与留一法交叉验证误差近似等价。
 即使装袋法树的集合比单个树解释数据要困难得多，
 也可以用 RSS（针对装袋法回归树）或基尼系数（针对装袋法分类树），
 对各预测变量的重要性做出整体概括。
+\begin{dxtips}
+    bagging和pasting的区别是bagging要把东西放回去，passing不用
+\end{dxtips}
 \section{随机森林}
 \begin{definition}[随机森林]
     随机森林（random forest）通过对树做去相关处理，实现了对装袋法树的改进。
@@ -308,5 +311,164 @@ OOB 误差与留一法交叉验证误差近似等价。
   \item 10 个人各自独立思考 $\;\Rightarrow\;$ 有人错有人对，平均结果更接近真值。
 \end{itemize}
 分类聚类然后神经网络把深度学习结合到Matlab上边做边学
+\section{boosting提升法}
+\begin{definition}[提升法（Boosting）]
+提升法（boosting，最初被称为假设提升）是指可以将几个弱学习器组合成一个强学习器的任意集成方法。大多数提升法的总体思想是循环训练预测器，每一次都对其前序预测器做出一些改正。常见的提升法包括 AdaBoost（Adaptive Boosting）和梯度提升（Gradient Boosting）。
+\end{definition}
+\begin{dxtips}
+    Boosting 的核心问题是：如何把多个只比随机猜好一点的弱学习器，
+    通过顺序训练和加权组合，提升成一个预测能力强的模型。
+\end{dxtips}
+\begin{definition}[AdaBoost]
+AdaBoost 是一种提升方法，其核心思想是在训练新的预测器时，更多地关注前序预测器欠拟合或分类错误的训练实例。具体而言，算法会先训练一个基础分类器，并用它对训练集进行预测；随后增加被错误分类样本的相对权重，再用更新后的权重训练下一个分类器。如此反复迭代，使后续分类器逐渐专注于前面模型难以处理的样本。
+\end{definition}
+\begin{align}
+\text{初始化样本权重：}\quad 
+&w_i^{(1)}=\frac{1}{m},
+\qquad
+\text{加权错误率：}\quad
+r_t=\sum_{i=1}^{m} w_i^{(t)}\mathbf{1}\bigl(h_t(x_i)\neq y_i\bigr)
+\\[4pt]
+\text{弱分类器权重：}\quad
+&\alpha_t=\eta\log\frac{1-r_t}{r_t},
+\qquad
+\text{样本权重更新：}\quad
+w_i^{(t+1)}
+=
+\frac{
+w_i^{(t)}\exp\left(-\alpha_t y_i h_t(x_i)\right)
+}{
+Z_t
+}
+\\[4pt]
+\text{最终强分类器：}\quad
+&H(x)=\operatorname{sign}\left(\sum_{t=1}^{T}\alpha_t h_t(x)\right),
+\qquad
+\hat{y}(x)
+=
+\arg\max_{k}
+\sum_{\substack{t=1\\ h_t(x)=k}}^{T}
+\alpha_t
+\end{align}
+\begin{dxtips}
+    AdaBoost 的核心思想是：提高上一轮被错误分类样本的权重，使后续弱学习器更加关注并修正这些 bad case。提高准确率高的人的话语权。只有第一轮是真正的错误概率后面的都是加权后的错误概率每一轮的优化目标就是加权错误概率最小这个也就是让机器学习的方向。
+\end{dxtips}
+\begin{note}
+在 AdaBoost 中，第 $j$ 个弱学习器的权重可以写为
+\[
+\alpha_j = \eta \log \frac{1-r_j}{r_j},
+\]
+其中，$\alpha_j$ 表示第 $j$ 个弱学习器在最终集成模型中的投票权重或可信度；$\eta$ 表示学习率，用来控制每个弱学习器对整体模型的影响程度；$r_j$ 表示第 $j$ 个弱学习器在当前样本权重下的加权错误率；$1-r_j$ 表示其加权正确率；$\frac{1-r_j}{r_j}$ 表示该弱学习器正确分类相对于错误分类的优势比。$r_j$ 越小，说明弱学习器表现越好，此时 $\alpha_j$ 越大，它在最终模型中的话语权也越大。
+\end{note}
+\begin{dxtips}
+    AdaBoost 就像一个军师训练多个谋士。每一轮都会训练一个新谋士，
+表现越好的谋士，在最终决策中的投票权越高；
+而上一轮被判错的案件，会在下一轮变得更重要，
+使新的谋士更倾向于学习如何处理这些 bad case。
+\end{dxtips}
+\begin{note}
+$\eta$ 是人为设定的学习率超参数，用来控制每一轮弱学习器权重的缩放幅度。$\eta$ 越小，模型每轮更新越保守，通常需要更多弱学习器；$\eta$ 越大，模型学习越快，但更容易过拟合。
+\end{note}
+\begin{dxtips}
+    我这样理解对不对Ada boost先用弱分类器训练得到一个模型和他的权重，然后再调整坏的权重然后用另一个弱分类器训练，然后此时两个训练器了。然后最后的决策是他们两商量着做
+\end{dxtips}
+
+\begin{definition}[符号函数]
+符号函数 $\operatorname{sign}(z)$ 用于判断实数 $z$ 的符号，定义为
+\[
+\operatorname{sign}(z)
+=
+\begin{cases}
++1, & z>0,\\
+0, & z=0,\\
+-1, & z<0.
+\end{cases}
+\]
+在 AdaBoost 中，它用于将多个弱分类器的加权投票结果转化为最终类别。
+\end{definition}
+
+\begin{dxtips}
+    由于弱分类器优化的加权错误率所以给badcase更高的权重就会尽量保证这个是对的
+    
+\end{dxtips}
+\begin{itemize}
+    \item 二分类：使用符号函数判断加权和的正负，$H(x)=\operatorname{sign}\left(\sum_{t=1}^{T}\alpha_t h_t(x)\right)$。
+    \item 多分类：统计每个类别的加权投票，选择权重和最大的类别，$\hat{y}(x)=\arg\max_{k}\sum_{\substack{t=1\\ h_t(x)=k}}^{T}\alpha_t$。
+\end{itemize}
+\subsection{GBRT}
+\begin{definition}[梯度提升回归树（Gradient Boosted Regression Tree, GBRT）]
+GBRT 是一种基于 Boosting 思想的集成学习算法。它通过迭代训练多棵回归树，使每一棵新树拟合当前模型在损失函数上的负梯度方向，并将这些弱学习器累加形成最终的强预测模型。
+\end{definition}
+
+\begin{dxtips}
+  \begin{itemize}
+    \item 梯度是由函数对各个变量的偏导数组成的向量。
+    \item 梯度方向表示函数值上升最快的方向。
+    \item 负梯度方向表示函数值下降最快的方向。
+\end{itemize}
+\end{dxtips}
+\begin{dxtips}
+    本质就是先把大方向弄正确，每一步都是把新的大方向弄正确，然后慢慢补细节。这个就是第一步先都预测常数使得残差最小，然后由真实值-预测值算出残差，然后用残差训练一个新模型，新模型的指标就是残差最小这个也就是负梯度方向，然后新的函数乘上一个学习率加到前一个函数后面。
+\end{dxtips}
+\[
+\begin{array}{ll}
+\text{初始化模型：}
+&
+F_0(x)=\arg\min_{\gamma}\sum_{i=1}^{m}L(y_i,\gamma)
+\\[8pt]
+
+\text{负梯度/伪残差：}
+&
+r_{im}
+=
+-\left[
+\frac{\partial L(y_i,F(x_i))}
+{\partial F(x_i)}
+\right]_{F(x)=F_{m-1}(x)}
+\\[8pt]
+
+\text{拟合负梯度：}
+&
+h_m
+=
+\arg\min_{h}
+\sum_{i=1}^{m}
+\left(r_{im}-h(x_i)\right)^2
+\\[8pt]
+
+
+
+\text{模型更新：}
+&
+F_m(x)
+=
+F_{m-1}(x)
++
+\nu
+\sum_{j=1}^{J}
+\gamma_{jm}\mathbf{1}(x\in R_{jm})
+\end{array}
+\]
+\begin{dxtips}
+  \begin{itemize}
+    \item 损失函数 $L(y_i,F(x_i))$：衡量真实值 $y_i$ 与当前模型预测值 $F(x_i)$ 之间的误差，GBRT 每一轮都围绕损失函数下降来更新模型。
+    \item 初始模型 $F_0(x)$：GBRT 的初始预测函数，通常是一个常数；在平方误差损失下，它等于所有真实值的平均值。
+    \item 负梯度/伪残差 $r_{im}$：第 $m$ 轮中第 $i$ 个样本需要修正的方向；在平方误差损失下，$r_{im}=y_i-F_{m-1}(x_i)$，也就是当前残差。
+   
+   
+    
+\end{itemize}
+\end{dxtips}
+\begin{itemize}
+    \item 叶子节点：决策树中样本经过一系列划分后最终落到的终点区域。
+    \item $R_{jm}$：第 $m$ 棵树中第 $j$ 个叶子节点对应的样本区域。
+    \item $\gamma_{jm}$：第 $m$ 棵树中第 $j$ 个叶子节点的输出值，表示落入该叶子节点的样本统一需要修正的大小。
+\end{itemize}
+\begin{dxtips}
+    每个叶子节点本质上对应一组样本区域，通常需要关注三件事：该叶子包含哪些样本、这些样本当前的残差/负梯度是多少，以及该叶子的输出值 $\gamma$ 是多少。其中真正用于更新模型的是叶子节点的输出值 $\gamma$。如果某个样本落入当前叶子节点管辖的区域，那么该样本在本轮相对于上一版模型的修正量就是 $\nu\gamma$，也就是“学习率 $\nu$ 乘以叶子输出值”。
+\end{dxtips}
+\begin{dxtips}
+    叶子节点可以理解为决策树分叉路径的末端，是模型真正给出输出值的位置。样本从根节点进入树后，会根据每个分裂条件不断向下选择路径，最终落到某个叶子节点；该叶子节点的输出值 $\gamma_{jm}$ 就是这棵树对该样本给出的修正量。
+\end{dxtips}
 \chapter{训练神经网络}
 \chapter{调优与上线意识}
