@@ -471,6 +471,23 @@ F_{m-1}(x)
     叶子节点可以理解为决策树分叉路径的末端，是模型真正给出输出值的位置。样本从根节点进入树后，会根据每个分裂条件不断向下选择路径，最终落到某个叶子节点；该叶子节点的输出值 $\gamma_{jm}$ 就是这棵树对该样本给出的修正量。
 \end{dxtips}
 \subsection{XGBoosting}
+\dirtree{%
+.1 XGBoost 总目标.
+.2 目标：让训练损失 + 正则化惩罚最小.
+.2 第 $t$ 轮：增加一棵新树 $f_t$.
+.3 已固定：前 $t-1$ 棵树.
+.4 老树的预测和复杂度都不再优化.
+.3 要优化：新树 $f_t$.
+.4 新树结构 $q(x)$.
+.5 决定样本怎么被分到不同叶子.
+.5 通过分裂增益 Gain 判断要不要切分.
+.4 叶子输出 $w$.
+.5 每个叶子输出一个统一修正值 $w_j$.
+.5 固定树结构后，优化每个叶子的 $w_j$.
+.5 最优叶子输出：$w_j^*=-\frac{G_j}{H_j+\lambda}$.
+.3 更新预测.
+.4 新预测 = 旧预测 + 学习率 $\times$ 新树输出.
+}
 \begin{definition}[XGBoost]
 XGBoost（Extreme Gradient Boosting）是一种高效、可扩展的
 梯度提升决策树（Gradient Boosting Decision Tree, GBDT）算法实现。
@@ -481,23 +498,461 @@ XGBoost（Extreme Gradient Boosting）是一种高效、可扩展的
 并利用一阶梯度和二阶梯度信息来优化每一轮的树结构与叶子节点权重，
 因此通常具有更强的泛化能力、更好的过拟合控制能力和更高的训练效率。
 \end{definition}
+\begin{dxtips}
+    XGBoost他优化的是损失函数是训练损失+正则化，L2正则
+\end{dxtips}
+\begin{note}[优化函数]
+    \[
+\mathcal{L}(\phi)
+=
+\sum_i l(\hat{y}_i,y_i)
++
+\sum_k \Omega(f_k)
+\]
+\end{note}
+\begin{dxtips}
+训练损失就是：模型在训练样本上预测错了多少。比如回归任务里，常用平方误差。训练目标就是整个目标函数最小
+\end{dxtips}
+\begin{note}[正则项]
+\[
+\Omega(f)=\gamma T+\frac{1}{2}\lambda \|w\|^2
+\]
+
 \begin{itemize}
-  \item \textbf{二阶梯度信息：}GBRT 通常只利用一阶梯度，XGBoost 同时利用一阶梯度和二阶梯度，
-  因而对损失函数的局部近似更精细。
-
-  \item \textbf{正则化项：}XGBoost 在目标函数中加入树复杂度惩罚，
-  例如叶子节点数量和叶子权重大小，用来控制模型复杂度、缓解过拟合。
-
-  \item \textbf{更精细的叶子节点权重计算：}XGBoost 不只是让新树拟合残差，
-  而是根据目标函数的近似形式直接求每个叶子节点的最优输出值。
-
-  \item \textbf{列采样与行采样：}XGBoost 支持对特征和样本进行采样，
-  类似随机森林的一部分思想，可以降低过拟合并提升训练效率。
-
-  \item \textbf{缺失值自动处理：}XGBoost 可以在训练过程中自动学习缺失值应该走向哪个分支。
-
-  \item \textbf{工程优化：}XGBoost 对并行计算、稀疏特征、缓存访问和分布式训练做了优化，
-  因此在大规模表格数据上训练速度和可扩展性更好。
+    \item $\gamma$：控制叶子节点数量的惩罚强度。$\gamma$ 越大，模型越不愿意继续分裂出新的叶子节点，树会更简单。
+    \item $\lambda$：控制叶子节点输出值大小的惩罚强度。$\lambda$ 越大，叶子输出值 $w$ 会被压得越小，模型每一轮更新更加保守。
+    \item $T$：这棵树最终有几片叶子，也就是有几个终端节点。
+    \item $w$：一棵树所有叶子节点输出值组成的向量。
 \end{itemize}
+
+例如一棵树有 3 个叶子节点，输出分别为 $0.8,-0.3,0.1$，则
+\[
+w=[0.8,\,-0.3,\,0.1],
+\qquad
+\|w\|^2
+=
+0.8^2+(-0.3)^2+0.1^2
+=
+0.74.
+\]
+\end{note}
+\begin{note}[所有树对$ x_i $的输出之和就是预测]
+    \[
+\hat{y}_i
+=
+\phi(x_i)
+=
+\sum_{k=1}^{K} f_k(x_i),
+\qquad
+f_k \in \mathcal{F}
+\]
+\end{note}
+\begin{note}[加入第t课树的优化函数。]
+\[
+\mathcal{L}^{(t)}
+=
+\sum_{i=1}^{n}
+l\left(y_i,\hat{y}_i^{(t-1)}+f_t(x_i)\right)
++
+\Omega(f_t)
+\]
+
+这个其实就是前半部分就是加入 $f_t$ 的以后新的预测与真实的求损失函数，后面的其实就是加入新树的代价，也就是新树的复杂度。因为老树的复杂度已经是固定的了。
+\end{note}
+\begin{note}
+XGBoost 在第 $t$ 轮中，用二阶泰勒展开近似加入新树后的损失函数：
+\[
+\tilde{\mathcal{L}}^{(t)}
+=
+\sum_{i=1}^{n}
+\left[
+g_i f_t(x_i)
++
+\frac{1}{2}h_i f_t^2(x_i)
+\right]
++
+\Omega(f_t)
+\]
+
+其中，$g_i$ 是一阶梯度，表示当前预测应该往哪个方向修正；$h_i$ 是二阶梯度，表示损失函数在当前位置的曲率信息；$f_t(x_i)$ 是新树对第 $i$ 个样本给出的修正量。
+
+这一步的作用是把原本不好直接优化的损失函数，近似成关于 $f_t(x_i)$ 的二次形式，从而方便后面求叶子节点最优权重和分裂增益。
+\end{note}
+\begin{example}[梯度如何影响计算]
+以平方误差 $l(y_i,\hat{y}_i)=(\hat{y}_i-y_i)^2$ 为例，对 $\hat{y}_i$ 求导得到一阶梯度 $g_i=2(\hat{y}_i-y_i)$。若 $y_i=10,\hat{y}_i=6$，则 $g_i=2(6-10)=-8$，负梯度 $-g_i=8$，说明预测值应该往上调。
+
+但新树不是给每个样本单独记修正量，而是把相似样本分到同一个叶子，并输出统一修正值。例如样本 1 的负梯度是 $8$，样本 3 的负梯度是 $2$，若它们落入同一叶子，则叶子可能输出折中值 $5$。当学习率 $\eta=0.1$ 时，实际更新为 $0.1\times 5=0.5$，所以样本 1 和样本 3 都加 $0.5$。因此，梯度只告诉模型修正方向和需求强弱，最终改多少由叶子输出、学习率和正则化共同决定。
+\end{example}
+\begin{dxtips}
+    本质上就是把ft（xi）当成了Δx，然后损失函数是固定的比如这个例子里面就是平方误差。他的二阶导就是2
+\end{dxtips}
+\begin{note}
+    二次函数求最小值：对 $w_j$ 求导，令导数等于 $0$：
+\[
+G_j + (H_j+\lambda)w_j = 0,
+\qquad
+w_j^*
+=
+-
+\frac{G_j}{H_j+\lambda}.
+\]
+
+这就是叶子节点最优输出值。
+\end{note}
+\begin{note}[分裂增益 Gain]
+XGBoost 用分裂增益判断一个节点是否值得继续切分：
+\[
+Gain
+=
+\frac{1}{2}
+\left[
+\frac{G_L^2}{H_L+\lambda}
++
+\frac{G_R^2}{H_R+\lambda}
+-
+\frac{G^2}{H+\lambda}
+\right]
+-
+\gamma
+\]
+
+其中，$G_L,H_L$ 是左子节点的一阶、二阶梯度之和，$G_R,H_R$ 是右子节点的一阶、二阶梯度之和，$G,H$ 是父节点的一阶、二阶梯度之和。$\lambda$ 控制叶子权重的 L2 正则，$\gamma$ 是新增叶子的复杂度惩罚。
+
+如果 $Gain>0$，说明这一刀能让目标函数下降，值得切分；如果 $Gain\le 0$，说明这一刀不划算，不切。
+\end{note}
+\subsection{LightGBM}
+\dirtree{%
+.1 LightGBM 总目标.
+.2 目标：在保持 GBDT 精度的同时，让训练更快、内存更省.
+.2 本质：仍然是 GBDT / GBM.
+.3 每一轮增加一棵新树.
+.3 新树仍然拟合当前模型的负梯度 / 残差.
+.3 仍然通过分裂增益判断节点怎么切分.
+.2 核心瓶颈：普通 GBDT 找分裂太慢.
+.3 对每个特征都要扫描大量样本.
+.3 复杂度大致受 $\#data \times \#feature$ 影响.
+.3 数据越大、特征越多，训练越慢.
+.2 加速一：Histogram 直方图算法.
+.3 连续特征先离散成 bin.
+.4 不再枚举所有连续取值.
+.4 只在有限个 bin 上找切分点.
+.3 构建直方图复杂度：$O(\#data \times \#feature)$.
+.3 找切分点复杂度：$O(\#bin \times \#feature)$.
+.2 加速二：GOSS，减少样本数量.
+.3 按梯度绝对值排序样本.
+.4 大梯度样本：模型还没学好，信息量大.
+.4 小梯度样本：模型已经学得比较好，信息量小.
+.3 保留前 $a \times 100\%$ 的大梯度样本.
+.3 从剩余小梯度样本中随机采样 $b \times 100\%$.
+.3 对采到的小梯度样本乘上权重 $\frac{1-a}{b}$.
+.4 目的：补偿被丢掉的小梯度样本.
+.4 尽量不改变原始数据分布.
+.3 用近似增益 $\tilde{V}_j(d)$ 代替全量增益 $V_j(d)$.
+.2 加速三：EFB，减少特征数量.
+.3 利用稀疏特征的互斥性.
+.4 很多 one-hot 特征不会同时非零.
+.4 可以把互斥特征打包成一个 bundle.
+.3 特征数从 $\#feature$ 变成 $\#bundle$.
+.3 复杂度从 $O(\#data \times \#feature)$ 降到 $O(\#data \times \#bundle)$.
+.2 最终效果.
+.3 GOSS 处理样本多的问题.
+.3 EFB 处理特征多的问题.
+.3 Histogram 让分裂搜索更快.
+.3 所以 LightGBM = 更轻、更快的 GBDT 实现.
+}
+\begin{dxtips}
+     \(V_j(d)\) 是全量样本上的真实分裂增益；\(\tilde{V}_j(d)\) 是 GOSS 采样后的近似分裂增益。   
+\end{dxtips}
+\begin{definition}[原始分裂增益 $V_j(d)$]
+$V_j(d)$ 表示在第 $j$ 个特征上，以 $d$ 为切分点时的分裂增益：
+\[
+V_j(d)
+=
+\frac{1}{n}
+\left[
+\frac{
+\left(\sum_{x_i:x_{ij}\le d} g_i\right)^2
+}{
+n_l^j(d)
+}
++
+\frac{
+\left(\sum_{x_i:x_{ij}>d} g_i\right)^2
+}{
+n_r^j(d)
+}
+\right].
+\]
+它用全量样本计算该切分点的收益，是 GOSS 近似分裂增益 $\tilde{V}_j(d)$ 要近似的对象。
+\end{definition}
+\begin{definition}[核心公式：GOSS 近似分裂增益Gradient-based One-Side Sampling]
+GOSS发生在抉择要不要分叉的时候。
+在 GOSS 中，先保留梯度绝对值最大的 前百分a的样本，记为集合 $A$；
+再从剩余的小梯度样本中随机采样 百分之b，记为集合 $B$。
+然后用下面的近似分裂增益代替全量数据上的分裂增益：
+\[
+\tilde{V}_j(d)
+=
+\frac{1}{n}
+\left[
+\frac{
+\left(
+\sum_{x_i\in A_l} g_i
++
+\frac{1-a}{b}
+\sum_{x_i\in B_l} g_i
+\right)^2
+}{
+n_l^j(d)
+}
++
+\frac{
+\left(
+\sum_{x_i\in A_r} g_i
++
+\frac{1-a}{b}
+\sum_{x_i\in B_r} g_i
+\right)^2
+}{
+n_r^j(d)
+}
+\right].
+\]
+其中：
+Al就是left梯度前百分之a的点，Ar就是右边前百分之a点，第 \(j\) 个特征在切分点 \(d\) 上的分裂增益。比如在年龄这个特征 25分裂的收益，$n$ 是当前这个节点里的样本总数，
+左边的样本数就是 $n_l^j(d)$ 个，
+右边的样本数就是 $n_r^j(d)$ 个。
+
+这里 $g_i$ 表示第 $i$ 个样本的梯度；
+$a$ 表示保留的大梯度样本比例；
+$b$ 表示从小梯度样本中采样的比例；
+$\frac{1-a}{b}$ 是小梯度样本的放大系数，用来补偿没有被采到的小梯度样本。
+\end{definition}
+\begin{dxtips}
+    因为是和的平方，个数从原来的n变成了n²所以最外面还得再除一次n
+\end{dxtips}
+\begin{dxtips}
+   \begin{itemize}
+    \item GOSS 变快，是因为它不用让所有小梯度样本都参与分裂增益计算。
+    
+    \item 大梯度样本：模型还没学好，信息量大，所以全部保留。
+    
+    \item 小梯度样本：模型已经学得比较好，信息量小，所以只抽一部分。
+    
+    \item 被抽中的小梯度样本：乘上一个放大系数，代表那些没被抽中的小梯度样本。
+\end{itemize}
+\end{dxtips}
+\begin{note}
+    这个长的像顺序统计量，前百分之a本来就是顺序统计量的表述。这个vj就是从原来每一个都要取每一个权重都一样变成了取一部分。
+\end{note}
+\begin{example}
+    
+
+$d$ 表示某个特征上的切分点。
+
+例如，如果特征是年龄，切分点是 $25$，那么：
+\[
+\text{年龄} \le 25 \quad \text{走左边},
+\qquad
+\text{年龄} > 25 \quad \text{走右边}.
+\]
+\end{example}
+
+
+\begin{dxtips}[$\frac{1-a}{b}$ 的无偏补偿]
+GOSS 只采样一部分小梯度样本，所以直接求和会低估小梯度样本的总体贡献。
+乘上 $\frac{1-a}{b}$ 后，有
+\[
+\mathbb{E}\left[
+\frac{1-a}{b}
+\sum_{x_i\in B} g_i
+\right]
+=
+\sum_{x_i\in A^c} g_i.
+\]
+因此，$\frac{1-a}{b}$ 的作用是让采样小梯度的加权和成为全体小梯度梯度和的无偏估计。
+
+\end{dxtips}
+\begin{definition}[Histogram 直方图算法]
+Histogram 直方图算法是 LightGBM 用来加速分裂搜索的方法。
+它先将连续特征离散成有限个 bin，
+然后在训练决策树时不再枚举所有连续取值作为切分点，
+而只在 bin 的边界上寻找最佳切分点。
+
+因此，构建直方图的复杂度为
+\[
+O(\#data \times \#feature),
+\]
+寻找切分点的复杂度为
+\[
+O(\#bin \times \#feature).
+\]
+由于通常有 $\#bin \ll \#data$，
+所以 Histogram 可以显著加快分裂点搜索。
+\end{definition}
+
+\begin{definition}[EFB：互斥特征捆绑]
+EFB（Exclusive Feature Bundling）利用高维稀疏特征的互斥性，
+把多个几乎不会同时非零的特征合并成更少的 bundle。
+
+设原始特征数为 $\#feature$，捆绑后的特征组数为 $\#bundle$，
+且通常有
+\[
+\#bundle \ll \#feature.
+\]
+因此，直方图构建复杂度可以从
+\[
+O(\#data \times \#feature)
+\]
+降低为
+\[
+O(\#data \times \#bundle).
+\]
+\end{definition}
+\begin{dxtips}
+    \begin{itemize}
+    \item Histogram：把每个连续特征的取值离散成若干个 bin。
+    目的：减少每个特征上的候选切分点数量，也就是减少 $d$ 的数量。
+    
+    \item EFB：把多个互斥的稀疏特征打包成一个 bundle。
+    目的：减少有效特征数量，也就是减少 $j$ 的数量。
+\end{itemize}
+
+\[
+\begin{array}{ll}
+\text{原来要搜索：} & \text{所有特征 } j \times \text{所有切分点 } d \\[4pt]
+\text{Histogram 后：} & \text{所有特征 } j \times \text{少量 bin 切分点 } d \\[4pt]
+\text{EFB 后：} & \text{少量 bundle } j \times \text{少量 bin 切分点 } d
+\end{array}
+\]
+\end{dxtips}
+
+
+
+
+
+
+
+
+\begin{example}[EFB 合并互斥 one-hot 特征]
+假设广告/推荐场景中有城市 one-hot 特征：
+\[
+\text{北京},\ \text{上海},\ \text{深圳},\ \text{广州}.
+\]
+同一用户同一时刻只属于一个城市，因此这些特征互斥。例如
+\[
+\text{北京}=1 \Rightarrow \text{上海}=\text{深圳}=\text{广州}=0.
+\]
+
+原始特征为：
+\[
+\begin{array}{c|cccc}
+\text{用户} & \text{北京} & \text{上海} & \text{深圳} & \text{广州} \\
+\hline
+A & 1 & 0 & 0 & 0 \\
+B & 0 & 1 & 0 & 0 \\
+C & 0 & 0 & 1 & 0 \\
+D & 0 & 0 & 0 & 1
+\end{array}
+\]
+EFB 可将其捆绑成一个特征 $\text{城市\_bundle}$：
+\[
+\text{北京}\mapsto 1,\quad
+\text{上海}\mapsto 2,\quad
+\text{深圳}\mapsto 3,\quad
+\text{广州}\mapsto 4.
+\]
+捆绑后：
+\[
+\begin{array}{c|c}
+\text{用户} & \text{城市\_bundle} \\
+\hline
+A & 1 \\
+B & 2 \\
+C & 3 \\
+D & 4
+\end{array}
+\]
+
+因此，特征数从 $4$ 降为 $1$，直方图构建复杂度从
+\[
+O(\#data \times 4)
+\quad \text{降为} \quad
+O(\#data \times 1).
+\]
+\end{example}
+\begin{dxtips}[不是一类合并成一类而是只要互斥就可以放在一类]
+EFB 可以理解为训练前的“合并同类项”：
+它把许多很少同时出现的稀疏特征列，打包成更少的 bundle 特征。
+
+但 EFB 的合并依据不是语义类别，例如并不是因为
+\[
+\text{北京},\text{上海},\text{深圳},\text{广州}
+\]
+都属于城市，所以才合并。
+
+它真正关心的是特征之间是否互斥，即：
+\[
+x_a \neq 0 \quad \Rightarrow \quad x_b \approx 0.
+\]
+
+如果两个特征几乎不会同时非零，就可以放入同一个 bundle。bundle也就是特征束也就是在训练前先简化分化，分类以后改变映射关系从而矩阵的维度
+\end{dxtips}
+\begin{note}
+    于是，直方图不只是统计每个桶里的样本数，
+还会把同一个桶中的梯度累加起来：
+\[
+\begin{array}{c|c|c}
+\text{桶} & \text{样本数} & \sum g_i \\
+\hline
+\text{桶1} & 1 & -2 \\
+\text{桶2} & 2 & 1+3=4 \\
+\text{桶3} & 1 & -1 \\
+\text{桶4} & 1 & 2
+\end{array}
+\]
+
+这张按桶汇总样本数和梯度信息的统计表，
+就是 LightGBM 中所说的直方图。
+\end{note}
+\begin{theorem}[LightGBM 的 Leaf-wise 生长策略]
+LightGBM 采用 leaf-wise 的树生长策略。
+在每一步分裂时，它不会像 level-wise 那样按层同时扩展所有叶子节点，
+而是优先选择当前分裂增益最大的叶子节点继续分裂。
+
+因此，leaf-wise 通常可以更快降低训练损失，
+但也更容易生成较深的局部路径，从而带来过拟合风险。
+实际训练中通常需要通过
+\[
+\texttt{num\_leaves},\quad \texttt{max\_depth}
+\]
+等参数控制树的复杂度。
+\end{theorem}
+\begin{note}[LightGBM 常用复杂度控制参数]
+Leaf-wise 生长会优先分裂增益最大的叶子节点，
+因此训练损失下降快，但也更容易长出过深的局部路径。
+实际训练中通常用以下参数控制模型复杂度：
+\begin{itemize}
+    \item $\texttt{num\_leaves}$：控制一棵树最多有多少个叶子节点，是 leaf-wise 中最重要的复杂度参数。
+    \item $\texttt{max\_depth}$：限制树的最大深度，防止某些路径过深。
+    \item $\texttt{min\_data\_in\_leaf}$：限制每个叶子节点至少包含多少样本，防止叶子过小导致过拟合。
+    \item $\texttt{learning\_rate}$：控制每棵新树对模型的修正幅度，越小越保守，通常需要更多树。
+    \item $\texttt{lambda\_l1},\ \texttt{lambda\_l2}$：分别表示 L1 和 L2 正则化，用来惩罚模型复杂度。
+\end{itemize}
+\end{note}
+\begin{dxtips}
+EFB 的关键不只是“把互斥特征打包”，还包括两个细节：
+\textbf{冲突率（conflict rate）} 和 \textbf{图着色（graph coloring）}。
+
+实际数据中，并不是所有特征都能做到完全互斥。
+LightGBM 允许少量特征冲突，只要冲突率足够低，
+这些特征仍然可以被放进同一个 bundle。
+
+为了找到合适的 bundle，LightGBM 会把特征看成图中的节点。
+如果两个特征不能互斥，就在它们之间连边。
+这样，寻找最少 bundle 的问题就可以转化为图着色问题：
+相互冲突的特征不能使用同一种颜色，同一种颜色对应一个 bundle。
+实际算法中通常使用贪婪策略近似求解。
+\end{dxtips}
 \chapter{训练神经网络}
 \chapter{调优与上线意识}
